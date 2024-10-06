@@ -18,4 +18,5 @@ https://keepachangelog.com/en/1.0.0/
 ### Added
 
 - Base HID device class interface
-- Device implementation for `Razer Pro Click Mini`
+- Device implementation for mouse `Razer Pro Click Mini`
+- Device implementation for headset `HyperX Cloud Alpha Wireless`
