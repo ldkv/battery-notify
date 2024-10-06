@@ -35,6 +35,7 @@ class BaseDevice:
     matching_device: DeviceInfo
     battery_index: int
     name: str = "BaseDevice"
+    type: str = "HID Device"
     device_info: DeviceInfo | None = field(init=False, default=None)
     battery_message: list[int] | None = field(init=False, default=None)
     battery_level: float = field(init=False, default=-1)

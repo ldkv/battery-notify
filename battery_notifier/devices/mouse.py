@@ -2,7 +2,7 @@ import logging
 import time
 from dataclasses import dataclass
 
-from .base import BaseDevice, DeviceInfo
+from devices.base import BaseDevice, DeviceInfo
 
 
 @dataclass
@@ -12,6 +12,7 @@ class Mouse(BaseDevice):
     matching_device: DeviceInfo = DeviceInfo(interface_number=0)
     battery_index: int = 10
     name: str = "Razer Pro Click Mini"
+    type: str = "mouse"
 
     def generate_battery_message(self) -> list[int]:
         message_size = 91
@@ -37,7 +38,9 @@ class Mouse(BaseDevice):
             device = self.open_device()
             device.send_feature_report(self.battery_message)
             if device.error() != "Success":
-                raise Exception(f"Error send_feature_report: {device.error()}")
+                raise Exception(
+                    f"{self.name} - Error send_feature_report: {device.error()}"
+                )
 
             time.sleep(0.4)
             report = device.get_feature_report(
@@ -45,7 +48,8 @@ class Mouse(BaseDevice):
             )
             self.battery_level = round(report[self.battery_index] / 255 * 100, 2)
         except Exception as e:
-            logging.error(f"Error update_battery_level: {e}")
+            logging.error(f"{self.name} - Error update_battery_level: {e}")
+            self.battery_level = -1
         finally:
             device.close()
 
