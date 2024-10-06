@@ -20,3 +20,4 @@ https://keepachangelog.com/en/1.0.0/
 - Base HID device class interface
 - Device implementation for mouse `Razer Pro Click Mini`
 - Device implementation for headset `HyperX Cloud Alpha Wireless`
+- System tray management with `pystray`
