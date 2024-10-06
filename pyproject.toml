@@ -1,0 +1,27 @@
+[project]
+name = "battery-notify"
+version = "0.1.0"
+description = "Notify when battery is low"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["hidapi>=0.14.0.post2", "pystray>=0.19.5"]
+
+[tool.uv]
+dev-dependencies = ["mypy>=1.11.2", "pytest>=8.3.3", "ruff>=0.6.9"]
+
+# Ruff: code formatter + linter
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "C", "Q", "B", "A", "PL"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+# Type checker: mypy
+[tool.mypy]
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = [".dev"]
