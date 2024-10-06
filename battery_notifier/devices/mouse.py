@@ -38,14 +38,10 @@ class Mouse(BaseDevice):
             device = self.open_device()
             device.send_feature_report(self.battery_message)
             if device.error() != "Success":
-                raise Exception(
-                    f"{self.name} - Error send_feature_report: {device.error()}"
-                )
+                raise Exception(f"{self.name} - Error send_feature_report: {device.error()}")
 
             time.sleep(0.4)
-            report = device.get_feature_report(
-                self.report_id, len(self.battery_message)
-            )
+            report = device.get_feature_report(self.report_id, len(self.battery_message))
             self.battery_level = round(report[self.battery_index] / 255 * 100, 2)
         except Exception as e:
             logging.error(f"{self.name} - Error update_battery_level: {e}")

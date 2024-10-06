@@ -12,7 +12,7 @@ class BatteryThreshold(Enum):
 
     @classmethod
     def ascending_order(cls) -> list["BatteryThreshold"]:
-        return sorted(list(cls), key=lambda threshold: threshold.value)
+        return sorted(cls, key=lambda threshold: threshold.value)
 
     @classmethod
     def default(cls) -> Path:
@@ -23,6 +23,8 @@ class BatteryThreshold(Enum):
         for threshold in cls.ascending_order():
             if battery_level <= threshold.value:
                 return threshold
+
+        return cls.CRITICAL
 
     def icon(self) -> Path:
         return ASSET_PATH / f"battery-{self.name.lower()}.png"

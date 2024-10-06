@@ -31,12 +31,10 @@ class Headset(BaseDevice):
             device = self.open_device()
             device.write(self.battery_message)
             if device.error() != "Success":
-                raise Exception(
-                    f"{self.name} - Error writing message: {device.error()}"
-                )
+                raise Exception(f"{self.name} - Error writing message: {device.error()}")
 
             report = device.read(4, READ_TIMEOUT_MS)
-            self.battery_level = round(report[self.battery_index] / 255 * 100, 2)
+            self.battery_level = report[self.battery_index]
         except Exception as e:
             logging.error(f"{self.name} - Error update_battery_level: {e}")
             self.battery_level = -1

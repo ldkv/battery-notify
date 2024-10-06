@@ -21,3 +21,4 @@ https://keepachangelog.com/en/1.0.0/
 - Device implementation for mouse `Razer Pro Click Mini`
 - Device implementation for headset `HyperX Cloud Alpha Wireless`
 - System tray management with `pystray`
+- Allow manual update with left click on system tray icon

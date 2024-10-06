@@ -54,9 +54,7 @@ class BaseDevice:
             raise Exception(f"Device not found: {self.name}")
 
         self.battery_message = self.generate_battery_message()
-        logging.info(
-            f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}"
-        )
+        logging.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
         # Just to log the report descriptor
         self.report_descriptor = self.get_report_descriptor()
@@ -72,10 +70,10 @@ class BaseDevice:
 
     def open_device(self) -> hid.device:
         device = hid.device()
-        device.open_path(self.device_info.path)
+        device.open_path(self.device_info.path)  # type: ignore
         return device
 
-    def get_report_descriptor(self) -> list[int]:
+    def get_report_descriptor(self) -> str:
         try:
             device = self.open_device()
             descriptor = device.get_report_descriptor()
@@ -98,3 +96,5 @@ class BaseDevice:
             battery_level = self.update_battery_level()
             if battery_level > 0:
                 return battery_level
+
+        return self.battery_level
