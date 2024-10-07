@@ -1,7 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from devices.base import BaseDevice, DeviceInfo
+from battery_notifier.devices.base import BaseDevice, DeviceInfo
 
 READ_TIMEOUT_MS = 1000
 

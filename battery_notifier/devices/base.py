@@ -56,10 +56,6 @@ class BaseDevice:
         self.battery_message = self.generate_battery_message()
         logging.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
-        # Just to log the report descriptor
-        self.report_descriptor = self.get_report_descriptor()
-        logging.info(f"{self.report_descriptor=}")
-
     def match_device_info(self) -> DeviceInfo | None:
         found_devices: list[dict] = hid.enumerate(self.VID, self.PID)
         for device in found_devices:
@@ -74,6 +70,7 @@ class BaseDevice:
         return device
 
     def get_report_descriptor(self) -> str:
+        """get_report_descriptor is not yet supported in hdiapi."""
         try:
             device = self.open_device()
             descriptor = device.get_report_descriptor()

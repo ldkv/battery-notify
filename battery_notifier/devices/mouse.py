@@ -2,7 +2,7 @@ import logging
 import time
 from dataclasses import dataclass
 
-from devices.base import BaseDevice, DeviceInfo
+from battery_notifier.devices.base import BaseDevice, DeviceInfo
 
 
 @dataclass

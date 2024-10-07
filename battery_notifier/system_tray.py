@@ -1,10 +1,11 @@
 import logging
 import time
 
-from battery import BatteryThreshold
-from devices import Device
 from PIL import Image
 from pystray import Icon, Menu, MenuItem, _base
+
+from battery_notifier.battery import BatteryThreshold
+from battery_notifier.devices import Device
 
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
 
