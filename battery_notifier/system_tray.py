@@ -5,6 +5,7 @@ from PIL import Image
 from pystray import Icon, Menu, MenuItem, _base
 
 from battery_notifier.battery import BatteryThreshold
+from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.devices import Device
 
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
@@ -39,7 +40,7 @@ def update_system_tray(system_tray: _base.Icon):
     for device in all_devices:
         battery_level = int(device.update_battery_level())
         battery_text = f"{battery_level}%"
-        if battery_level == -1:
+        if battery_level == DEFAULT_BATTERY_LEVEL:
             battery_text = "N/A"
             battery_level = min_battery + 1
         min_battery = min(min_battery, battery_level)
@@ -49,5 +50,9 @@ def update_system_tray(system_tray: _base.Icon):
     system_tray.title = title_text
     battery_threshold = BatteryThreshold.get_battery_threshold(min_battery)
     system_tray.icon = Image.open(battery_threshold.icon())
-    if battery_threshold.should_notify():
+    send_notification(system_tray, min_battery)
+
+
+def send_notification(system_tray: _base.Icon, min_battery: float):
+    if BatteryThreshold.should_notify(min_battery):
         system_tray.notify("Low Battery", system_tray.title)

@@ -1,7 +1,6 @@
-import logging
 from dataclasses import dataclass
 
-from battery_notifier.devices.base import BaseDevice, DeviceInfo
+from battery_notifier.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, DeviceInfo, HIDWrapper
 
 READ_TIMEOUT_MS = 1000
 
@@ -26,19 +25,9 @@ class Headset(BaseDevice):
         msg += [0] * (message_size - len(msg))
         return msg
 
-    def update_battery_level(self) -> float:
-        try:
-            device = self.open_device()
-            device.write(self.battery_message)
-            if device.error() != "Success":
-                raise Exception(f"{self.name} - Error writing message: {device.error()}")
+    def get_battery_level(self, device: HIDWrapper) -> int:
+        if not device.write(self.battery_message):
+            return DEFAULT_BATTERY_LEVEL
 
-            report = device.read(4, READ_TIMEOUT_MS)
-            self.battery_level = report[self.battery_index]
-        except Exception as e:
-            logging.error(f"{self.name} - Error update_battery_level: {e}")
-            self.battery_level = -1
-        finally:
-            device.close()
-
-        return self.battery_level
+        report = device.read(4, READ_TIMEOUT_MS)
+        return report[self.battery_index]

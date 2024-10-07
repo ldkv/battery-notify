@@ -1,7 +1,7 @@
 from enum import Enum
 from pathlib import Path
 
-ASSET_PATH = Path("assets/")
+from battery_notifier.configs import ASSET_PATH, NOTIFICATION_THRESHOLD
 
 
 class BatteryThreshold(Enum):
@@ -35,5 +35,6 @@ class BatteryThreshold(Enum):
             if not (ASSET_PATH / f"battery-{threshold.name.lower()}.png").exists():
                 raise FileNotFoundError(f"Icon not found: {threshold.name}")
 
-    def should_notify(self) -> bool:
-        return self in (self.CRITICAL, self.LOW)
+    @staticmethod
+    def should_notify(battery_level: float) -> bool:
+        return battery_level <= NOTIFICATION_THRESHOLD
