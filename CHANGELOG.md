@@ -23,3 +23,4 @@ https://keepachangelog.com/en/1.0.0/
 - System tray management with `pystray`
 - Allow manual update with left click on system tray icon
 - Use `uv` for project management
+- Wrapper class for `hdiapi` library
