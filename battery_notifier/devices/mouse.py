@@ -1,8 +1,7 @@
-import logging
 import time
 from dataclasses import dataclass
 
-from battery_notifier.devices.base import BaseDevice, DeviceInfo
+from battery_notifier.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, DeviceInfo, HIDWrapper
 
 
 @dataclass
@@ -33,20 +32,16 @@ class Mouse(BaseDevice):
         msg[-2] = crc
         return msg
 
-    def update_battery_level(self) -> float:
-        try:
-            device = self.open_device()
-            device.send_feature_report(self.battery_message)
-            if device.error() != "Success":
-                raise Exception(f"{self.name} - Error send_feature_report: {device.error()}")
+    def get_battery_level(self, device: HIDWrapper) -> int:
+        if not device.send_feature_report(self.battery_message):
+            return DEFAULT_BATTERY_LEVEL
 
-            time.sleep(0.4)
-            report = device.get_feature_report(self.report_id, len(self.battery_message))
-            self.battery_level = round(report[self.battery_index] / 255 * 100, 2)
-        except Exception as e:
-            logging.error(f"{self.name} - Error update_battery_level: {e}")
-            self.battery_level = -1
-        finally:
-            device.close()
+        time.sleep(0.4)
+        report = device.get_feature_report(self.report_id, len(self.battery_message))
+        # Battery level is a value between 0 and 255
+        battery_255 = report[self.battery_index]
+        return self.convert_battery_level(battery_255)
 
-        return self.battery_level
+    @staticmethod
+    def convert_battery_level(battery_level: int) -> int:
+        return int(battery_level / 255 * 100)
