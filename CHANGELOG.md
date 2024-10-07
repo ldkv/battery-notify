@@ -27,3 +27,4 @@ https://keepachangelog.com/en/1.0.0/
 - New `configs` module to centralize configuration
 - Convert `update_battery_level` method to base class
 - New abstract method `get_battery_level` to be implemented by device classes
+- Main entrypoint is converted to `pyw` for Windows compatibility
