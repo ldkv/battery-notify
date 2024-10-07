@@ -1,4 +1,3 @@
-import logging
 import time
 
 from PIL import Image
@@ -7,6 +6,7 @@ from pystray import Icon, Menu, MenuItem, _base
 from battery_notifier.battery import BatteryThreshold
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.devices import Device
+from battery_notifier.logs import logger
 
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
 
@@ -23,17 +23,20 @@ def initialize_system_tray():
             MenuItem("Quit", Icon.stop),
         ),
     )
+    update_system_tray(system_tray)
     return system_tray
 
 
-def battery_loop(system_tray: _base.Icon):
+def device_loop(system_tray: _base.Icon):
+    """Separate thread to check battery levels of all devices."""
     while True:
         update_system_tray(system_tray)
-        logging.info(f"Next check in {CHECK_FREQUENCY} seconds...")
+        logger.info(f"Next check in {CHECK_FREQUENCY} seconds...")
         time.sleep(CHECK_FREQUENCY)
 
 
 def update_system_tray(system_tray: _base.Icon):
+    """Update system tray icon and title base on devices' battery levels."""
     all_devices = Device.initialize_all()
     title_text = ""
     min_battery = 100

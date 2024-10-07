@@ -8,6 +8,7 @@ env.bak/
 venv.bak/
 .dev/
 .vscode/
+*.log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

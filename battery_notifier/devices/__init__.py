@@ -1,4 +1,5 @@
 from enum import Enum
+from functools import lru_cache
 
 from .base import BaseDevice
 from .headset import Headset
@@ -9,6 +10,7 @@ class Device(Enum):
     RazerProClickMini = Mouse
     HyperXAlphaWireless = Headset
 
+    @lru_cache(maxsize=1)
     @staticmethod
     def initialize_all() -> list[BaseDevice]:
         devices = list(Device)

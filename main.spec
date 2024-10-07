@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 added_files = [
-    ("assets", "assets"),
+    ("battery_notifier/assets", "assets"),
 ]
 
 a = Analysis(

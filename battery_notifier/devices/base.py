@@ -1,9 +1,9 @@
-import logging
 from abc import abstractmethod
 from dataclasses import dataclass, field
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.devices.hid_wrapper import DeviceInfo, HIDWrapper
+from battery_notifier.logs import logger
 
 
 @dataclass
@@ -32,7 +32,7 @@ class BaseDevice:
             raise Exception(f"Device not found: {self.name}")
 
         self.battery_message = self.generate_battery_message()
-        logging.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
+        logger.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
     def match_device_info(self) -> DeviceInfo | None:
         found_devices = HIDWrapper.enumerate_matching_devices(self.VID, self.PID)
@@ -51,8 +51,9 @@ class BaseDevice:
 
         try:
             self.battery_level = self.get_battery_level(device)
+            logger.info(f"{self.name} - Battery level: {self.battery_level}")
         except Exception as e:
-            logging.error(f"{self.name} - Error update_battery_level: {e}")
+            logger.error(f"{self.name} - Error update_battery_level: {e}")
         finally:
             device.close()
 

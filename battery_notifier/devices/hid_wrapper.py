@@ -1,7 +1,8 @@
-import logging
 from dataclasses import dataclass
 
 import hid
+
+from battery_notifier.logs import logger
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,7 @@ class HIDWrapper:
             device.open_path(device_path)
             return device
         except Exception as e:
-            logging.error(f"Error open_device: {e} / {device_path=}")
+            logger.error(f"Error open_device: {e} / {device_path=}")
 
         return None
 
@@ -61,7 +62,7 @@ class HIDWrapper:
         try:
             descriptor = self._device.get_report_descriptor()
         except Exception as e:
-            logging.error(f"Error get_report_descriptor: {e}")
+            logger.error(f"Error get_report_descriptor: {e}")
             return ""
 
         hex_descriptor = " ".join(f"{x:02X}" for x in descriptor)
@@ -72,14 +73,14 @@ class HIDWrapper:
         if self._device.error() == "Success":
             return True
 
-        logging.error(f"Error send_feature_report: {self._device.error()} / {message=}")
+        logger.error(f"Error send_feature_report: {self._device.error()} / {message=}")
         return False
 
     def get_feature_report(self, report_id: int, report_size: int) -> list[int]:
         try:
             return self._device.get_feature_report(report_id, report_size)
         except Exception as e:
-            logging.error(f"Error get_feature_report: {e} / {report_id=} / {report_size=}")
+            logger.error(f"Error get_feature_report: {e} / {report_id=} / {report_size=}")
 
         return []
 
@@ -88,14 +89,14 @@ class HIDWrapper:
         if self._device.error() == "Success":
             return True
 
-        logging.error(f"Error hid_write: {self._device.error()} / {message=}")
+        logger.error(f"Error hid_write: {self._device.error()} / {message=}")
         return False
 
     def read(self, size: int, timeout_ms: int) -> list[int]:
         try:
             return self._device.read(size, timeout_ms)
         except Exception as e:
-            logging.error(f"Error hid_read: {e} / {size=} / {timeout_ms=}")
+            logger.error(f"Error hid_read: {e} / {size=} / {timeout_ms=}")
 
         return []
 
