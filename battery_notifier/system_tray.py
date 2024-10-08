@@ -11,7 +11,7 @@ from battery_notifier.logs import logger
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
 
 
-def initialize_system_tray():
+def initialize_system_tray() -> _base.Icon:
     BatteryThreshold.validate_battery_icons()
     image = Image.open(BatteryThreshold.default())
     system_tray = Icon(
@@ -23,7 +23,6 @@ def initialize_system_tray():
             MenuItem("Quit", Icon.stop),
         ),
     )
-    update_system_tray(system_tray)
     return system_tray
 
 

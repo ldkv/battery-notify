@@ -4,7 +4,7 @@ added_files = [
 ]
 
 a = Analysis(
-    ['battery_notifier\\main.pyw'],
+    ['battery_notifier\\main.py'],
     pathex=[],
     binaries=[],
     datas=added_files,

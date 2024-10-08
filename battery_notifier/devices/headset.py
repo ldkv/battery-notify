@@ -19,8 +19,8 @@ class Headset(BaseDevice):
         self.report_id = 0x21
         msg = [
             self.report_id,
-            0xBB,
-            0x0B,
+            0xBB,  # 187
+            0x0B,  # 11
         ]
         msg += [0] * (message_size - len(msg))
         return msg
@@ -29,5 +29,5 @@ class Headset(BaseDevice):
         if not device.write(self.battery_message):
             return DEFAULT_BATTERY_LEVEL
 
-        report = device.read(4, READ_TIMEOUT_MS)
+        report = device.read(self.battery_index + 1, READ_TIMEOUT_MS)
         return report[self.battery_index]

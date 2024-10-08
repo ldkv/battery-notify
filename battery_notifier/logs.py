@@ -25,8 +25,8 @@ def configure_logging():
                 "formatter": "simple",
                 "filename": f"{GLOBAL_LOGGER_NAME}.log",
                 "mode": "a",
-                "maxBytes": 1024 * 1024 * 100,  # 100 MB
-                "backupCount": 5,
+                "maxBytes": 1024 * 1024 * 10,  # 10 MB
+                "backupCount": 3,
             },
         },
         "loggers": {
