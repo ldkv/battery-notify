@@ -23,7 +23,6 @@ def initialize_system_tray() -> _base.Icon:
             MenuItem("Quit", Icon.stop),
         ),
     )
-    update_system_tray(system_tray)
     return system_tray
 
 
