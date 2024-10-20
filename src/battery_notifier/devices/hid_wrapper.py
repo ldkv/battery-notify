@@ -60,7 +60,7 @@ class HIDWrapper:
             return ""
 
         try:
-            descriptor = self._device.get_report_descriptor()
+            descriptor = self._device.get_report_descriptor(max_length=max_length)
         except Exception as e:
             logger.warning(f"Error get_report_descriptor: {e}")
             return ""
