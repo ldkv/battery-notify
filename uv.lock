@@ -30,8 +30,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hidapi", specifier = ">=0.14.0.post2" },
-    { name = "pystray", specifier = ">=0.19.5" },
+    { name = "hidapi", specifier = "==0.14.0.post4" },
+    { name = "pystray", specifier = "==0.19.5" },
 ]
 
 [package.metadata.requires-dev]

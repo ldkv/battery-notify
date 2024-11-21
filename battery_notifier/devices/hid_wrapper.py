@@ -55,7 +55,6 @@ class HIDWrapper:
         return None
 
     def get_report_descriptor(self) -> str:
-        """NOTE: get_report_descriptor is not yet supported in hdiapi."""
         if not self._device:
             return ""
 
