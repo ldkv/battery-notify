@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Notify when battery is low"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["hidapi==0.14.0.post4", "pystray==0.19.5"]
+dependencies = ["bleak==0.22.3", "hidapi==0.14.0.post4", "pystray==0.19.5"]
 
 [dependency-groups]
 dev = ["mypy>=1.11.2", "pyinstaller>=6.10.0", "pytest>=8.3.3", "ruff>=0.6.9"]

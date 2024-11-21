@@ -15,15 +15,27 @@ uuid_battery_level_characteristic = "00002A19-0000-1000-8000-00805f9b34fb"
 async def main():
     devices = await BleakScanner.discover(return_adv=True, timeout=30)
     for address, (_, adv) in devices.items():
-        # if "1000XM4" not in str(adv.local_name):
-        #     continue
+        if "1000" not in str(adv.local_name):
+            continue
 
         print(f"{address}: {adv}")
     # address = "66:EB:41:EE:D4:71"  # Bose 700
-    address = "E8:BC:51:D0:95:6E"  # Nuphy
+    # address = "E8:BC:51:D0:95:6E"  # Nuphy
     # address = "88:C9:E8:D6:69:AF"
-    # address = "C0:9A:01:76:D4:B2"  # Sony WH-1000XM4
-
+    address = "C0:9A:01:76:D4:B2"  # Sony WH-1000XM4
+    print(f"Connecting to {address}")
+    #  Get-PnpDevice -FriendlyName "*nuphy*" | ForEach-Object {
+    #     $local:test = $_ |
+    #     Get-PnpDeviceProperty -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2' |
+    #         Where Type -ne Empty;
+    #     if ($test) {
+    #         "To query battery for $($_.FriendlyName), run the following:"
+    #         "    Get-PnpDeviceProperty -InstanceId '$($test.InstanceId)' -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2' | % Data"
+    #         ""
+    #         "The result will look like this:";
+    #         Get-PnpDeviceProperty -InstanceId $($test.InstanceId) -KeyName '{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2' | % Data
+    #     }
+    # }
     # this_device = await BleakScanner.find_device_by_address(address, timeout=20)
     async with BleakClient(address) as client:
         print(f"Connected: {address} / {client.is_connected}")
@@ -38,7 +50,7 @@ async def main():
             for c in service.characteristics:
                 print(f"\t\t\t{c}")
                 try:
-                    battery_level = await client.read_gatt_char(c.handle)
+                    battery_level = await client.read_gatt_char(c.uuid)
                     # battery_level = int.from_bytes(battery_level)
                     print(f"{battery_level=} / {c.uuid}")
                 except Exception as e:
@@ -98,5 +110,5 @@ def socket_test():
     s.listen(1)
 
 
-socket_test()
+# socket_test()
 asyncio.run(main())

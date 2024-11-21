@@ -27,7 +27,7 @@ def enumerate_all_devices(VID: int, PID: int) -> list[int]:
     logger.info(f"{found_devices=}")
     for device_info in found_devices:
         device = HIDWrapper(device_info.path)
-        report_descriptor = device.get_report_descriptor(0)
+        report_descriptor = device.get_report_descriptor()
         logger.info(f"{device_info=} / {report_descriptor=}")
         battery_report = get_battery_report_mouse_method(device)
         if battery_report >= 0:
