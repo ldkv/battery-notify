@@ -5,13 +5,13 @@ from pystray import Icon, Menu, MenuItem, _base
 
 from battery_notifier.battery import BatteryThreshold
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
-from battery_notifier.devices import Device
+from battery_notifier.devices import initialize_all_devices
 from battery_notifier.logs import logger
 
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
 
 
-def initialize_system_tray():
+def initialize_system_tray() -> _base.Icon:
     BatteryThreshold.validate_battery_icons()
     image = Image.open(BatteryThreshold.default())
     system_tray = Icon(
@@ -37,7 +37,7 @@ def device_loop(system_tray: _base.Icon):
 
 def update_system_tray(system_tray: _base.Icon):
     """Update system tray icon and title base on devices' battery levels."""
-    all_devices = Device.initialize_all()
+    all_devices = initialize_all_devices()
     title_text = ""
     min_battery = 100
     for device in all_devices:
