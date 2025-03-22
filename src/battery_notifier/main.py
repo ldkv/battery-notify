@@ -1,7 +1,34 @@
 import threading
 
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+
 from battery_notifier.logs import configure_logging
 from battery_notifier.system_tray import device_loop, initialize_system_tray
+
+app = QApplication([])
+app.setQuitOnLastWindowClosed(False)
+
+# Create the icon
+icon = QIcon("icon.png")
+
+# Create the tray
+tray = QSystemTrayIcon()
+tray.setIcon(icon)
+tray.setVisible(True)
+
+# Create the menu
+menu = QMenu()
+action = QAction("A menu item")
+menu.addAction(action)
+
+# Add a Quit option to the menu.
+quit = QAction("Quit")
+quit.triggered.connect(app.quit)
+menu.addAction(quit)
+
+# Add the menu to the tray
+tray.setContextMenu(menu)
 
 
 def main():

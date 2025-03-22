@@ -10,7 +10,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["bleak==0.22.3", "hidapi==0.14.0.post4", "pystray==0.19.5"]
+dependencies = [
+    "bleak==0.22.3",
+    "hidapi==0.14.0.post4",
+    "pyside6>=6.7.3",
+    "pystray==0.19.5",
+]
 
 [dependency-groups]
 dev = ["mypy==1.15.0", "pyinstaller>=6.10.0", "pytest==8.3.5", "ruff==0.11.2"]

@@ -2,8 +2,8 @@
 
 import time
 
-from battery_notifier.devices.hid_wrapper import HIDWrapper
-from battery_notifier.logs import configure_logging, logger
+from src.battery_notifier.devices.hid_wrapper import HIDWrapper
+from src.battery_notifier.logs import configure_logging, logger
 
 
 # pip install -e .
