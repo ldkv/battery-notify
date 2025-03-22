@@ -1,7 +1,7 @@
 [project]
 name = "battery_notifier"
 dynamic = ["version"]
-requires-python = ">=3.12"
+requires-python = "==3.13.2"
 description = "Notify when battery is low"
 readme = "README.md"
 authors = [{ name = "Vu LE", email = "ledkvu@gmail.com" }]
