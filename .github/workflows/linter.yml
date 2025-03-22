@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   lint_check:
-    runs-on: tooling
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
