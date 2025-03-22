@@ -12,9 +12,8 @@ wheels = [
 ]
 
 [[package]]
-name = "battery-notify"
-version = "0.1.0"
-source = { virtual = "." }
+name = "battery-notifier"
+source = { editable = "." }
 dependencies = [
     { name = "hidapi" },
     { name = "pystray" },
@@ -36,10 +35,10 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mypy", specifier = ">=1.11.2" },
+    { name = "mypy", specifier = "==1.15.0" },
     { name = "pyinstaller", specifier = ">=6.10.0" },
-    { name = "pytest", specifier = ">=8.3.3" },
-    { name = "ruff", specifier = ">=0.6.9" },
+    { name = "pytest", specifier = "==8.3.5" },
+    { name = "ruff", specifier = "==0.11.2" },
 ]
 
 [[package]]
