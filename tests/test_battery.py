@@ -1,4 +1,4 @@
-from battery_notifier.battery import BatteryThreshold
+from src.battery_notifier.battery import BatteryThreshold
 
 
 def test_battery_threshold_order():

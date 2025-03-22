@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 added_files = [
-    ("battery_notifier/assets", "assets"),
+    ("src/battery_notifier/assets", "assets"),
 ]
 
 a = Analysis(
-    ['battery_notifier\\main.py'],
+    ['src\\battery_notifier\\main.py'],
     pathex=[],
     binaries=[],
     datas=added_files,
