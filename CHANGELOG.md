@@ -13,6 +13,10 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+### Added
+
+- Makefile rule to build executable with PyInstaller
+
 ### Changed
 
 - Refactor `initialize_all_devices`

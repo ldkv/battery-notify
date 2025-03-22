@@ -82,6 +82,9 @@ check-all: lint-ci test ## Run all checks and tests
 
 
 ##@ Build and Publishing
+executable: env ## Build the executable with PyInstaller with existing main.spec file
+	uv run pyinstaller main.spec
+
 build: env ## Build the package - for dev purposes
 	uv build
 
