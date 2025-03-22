@@ -37,7 +37,7 @@ class Mouse(BaseDevice):
             return DEFAULT_BATTERY_LEVEL
 
         time.sleep(0.4)
-        report = device.get_feature_report(self.report_id, len(self.battery_message))
+        report = device.get_feature_report(self.report_id, len(self.battery_message))  # type: ignore[arg-type]
         # Battery level is a value between 0 and 255
         battery_255 = report[self.battery_index]
         return self.convert_battery_level(battery_255)

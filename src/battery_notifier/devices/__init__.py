@@ -13,7 +13,7 @@ class Device(Enum):
     HyperXAlphaWireless = Headset
 
 
-def initialize_all_devices() -> list[BaseDevice]:
+def initialize_all_devices() -> dict[str, BaseDevice]:
     for device in list(Device):
         if device.name in _ALL_DEVICES:
             continue

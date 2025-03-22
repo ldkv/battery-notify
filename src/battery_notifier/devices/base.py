@@ -44,6 +44,9 @@ class BaseDevice:
 
     def update_battery_level(self) -> float:
         """Fetch and update current battery level of the device."""
+        if not self.device_info:
+            return DEFAULT_BATTERY_LEVEL
+
         device = HIDWrapper(self.device_info.path)
         self.battery_level = DEFAULT_BATTERY_LEVEL
         if not device:

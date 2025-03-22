@@ -32,7 +32,7 @@ class DeviceInfo:
 
 
 class HIDWrapper:
-    def __init__(self, device_path: str):
+    def __init__(self, device_path: str | None = None):
         self._device = self.from_path(device_path)
 
     def __del__(self):
@@ -43,8 +43,11 @@ class HIDWrapper:
             self._device.close()
 
     @staticmethod
-    def from_path(device_path: str) -> hid.device | None:
+    def from_path(device_path: str | None = None) -> hid.device | None:
         """Open the device from HID path and return the device object."""
+        if device_path is None:
+            return None
+
         try:
             device = hid.device()
             device.open_path(device_path)
@@ -67,33 +70,39 @@ class HIDWrapper:
         hex_descriptor = " ".join(f"{x:02X}" for x in descriptor)
         return hex_descriptor
 
-    def send_feature_report(self, message: list[int]) -> bool:
-        self._device.send_feature_report(message)
-        if self._device.error() == "Success":
+    def send_feature_report(self, message: list[int] | None) -> bool:
+        if message is None:
+            return False
+
+        self._device.send_feature_report(message)  # type: ignore[union-attr]
+        if self._device.error() == "Success":  # type: ignore[union-attr]
             return True
 
-        logger.error(f"Error send_feature_report: {self._device.error()} / {message=}")
+        logger.error(f"Error send_feature_report: {self._device.error()} / {message=}")  # type: ignore[union-attr]
         return False
 
     def get_feature_report(self, report_id: int, report_size: int) -> list[int]:
         try:
-            return self._device.get_feature_report(report_id, report_size)
+            return self._device.get_feature_report(report_id, report_size)  # type: ignore[union-attr]
         except Exception as e:
             logger.error(f"Error get_feature_report: {e} / {report_id=} / {report_size=}")
 
         return []
 
-    def write(self, message: list[int]) -> bool:
-        self._device.write(message)
-        if self._device.error() == "Success":
+    def write(self, message: list[int] | None) -> bool:
+        if message is None:
+            return False
+
+        self._device.write(message)  # type: ignore[union-attr]
+        if self._device.error() == "Success":  # type: ignore[union-attr]
             return True
 
-        logger.error(f"Error hid_write: {self._device.error()} / {message=}")
+        logger.error(f"Error hid_write: {self._device.error()} / {message=}")  # type: ignore[union-attr]
         return False
 
     def read(self, size: int, timeout_ms: int) -> list[int]:
         try:
-            return self._device.read(size, timeout_ms)
+            return self._device.read(size, timeout_ms)  # type: ignore[union-attr]
         except Exception as e:
             logger.error(f"Error hid_read: {e} / {size=} / {timeout_ms=}")
 

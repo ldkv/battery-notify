@@ -39,7 +39,7 @@ def update_system_tray(system_tray: _base.Icon):
     all_devices = initialize_all_devices()
     title_text = ""
     min_battery = 100
-    for device in all_devices:
+    for device in all_devices.values():
         battery_level = int(device.update_battery_level())
         battery_text = f"{battery_level}%"
         if battery_level == DEFAULT_BATTERY_LEVEL:
