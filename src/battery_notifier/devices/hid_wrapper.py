@@ -18,6 +18,7 @@ class DeviceInfo:
     usage: int | None = None
     usage_page: int | None = None
     bus_type: int | None = None
+    report_descriptor: str = ""
 
     def matching_info(self, other_device: "DeviceInfo") -> bool:
         for key, device_value in self.__dict__.items():
@@ -33,7 +34,19 @@ class DeviceInfo:
 
 class HIDWrapper:
     def __init__(self, device_path: str | None = None):
-        self._device = self.from_path(device_path)
+        """Open the device from HID path and return the device object."""
+        self._device = None
+        if not device_path:
+            return
+
+        try:
+            self._device = hid.device()
+            self._device.open_path(device_path)
+        except Exception as e:
+            logger.warning(f"Error open_device: {e} / {device_path=}")
+
+    def __bool__(self) -> bool:
+        return self._device is not None
 
     def __del__(self):
         self.close()
@@ -42,21 +55,6 @@ class HIDWrapper:
         if self._device:
             self._device.close()
 
-    @staticmethod
-    def from_path(device_path: str | None = None) -> hid.device | None:
-        """Open the device from HID path and return the device object."""
-        if device_path is None:
-            return None
-
-        try:
-            device = hid.device()
-            device.open_path(device_path)
-            return device
-        except Exception as e:
-            logger.error(f"Error open_device: {e} / {device_path=}")
-
-        return None
-
     def get_report_descriptor(self) -> str:
         if not self._device:
             return ""
@@ -64,7 +62,7 @@ class HIDWrapper:
         try:
             descriptor = self._device.get_report_descriptor()
         except Exception as e:
-            logger.error(f"Error get_report_descriptor: {e}")
+            logger.warning(f"Error get_report_descriptor: {e}")
             return ""
 
         hex_descriptor = " ".join(f"{x:02X}" for x in descriptor)
@@ -110,5 +108,14 @@ class HIDWrapper:
 
     @staticmethod
     def enumerate_matching_devices(VID: int, PID: int) -> list[DeviceInfo]:
-        found_devices = hid.enumerate(VID, PID)
-        return [DeviceInfo(**device) for device in found_devices]
+        raw_devices = hid.enumerate(VID, PID)
+        devices = []
+        for device in raw_devices:
+            hid_device = HIDWrapper(device["path"])
+            if not hid_device:
+                continue
+
+            device["report_descriptor"] = hid_device.get_report_descriptor()
+            devices.append(DeviceInfo(**device))
+
+        return devices

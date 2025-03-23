@@ -10,11 +10,10 @@ from battery_notifier.logs import logger
 class BaseDevice:
     VID: int
     PID: int
-    matching_device: DeviceInfo
+    device_info: DeviceInfo
     battery_index: int
     name: str = "BaseDevice"
     type: str = "HID Device"
-    device_info: DeviceInfo | None = field(init=False, default=None)
     battery_message: list[int] | None = field(init=False, default=None)
     battery_level: int = field(init=False, default=DEFAULT_BATTERY_LEVEL)
 
@@ -28,19 +27,16 @@ class BaseDevice:
 
     def __post_init__(self):
         self.device_info = self.match_device_info()
-        if not self.device_info:
-            raise Exception(f"Device not found: {self.name}")
-
         self.battery_message = self.generate_battery_message()
         logger.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
-    def match_device_info(self) -> DeviceInfo | None:
+    def match_device_info(self):
         found_devices = HIDWrapper.enumerate_matching_devices(self.VID, self.PID)
         for device in found_devices:
-            if self.matching_device.matching_info(device):
+            if self.device_info.matching_info(device):
                 return device
 
-        return None
+        raise Exception(f"Device not found: {self.name}")
 
     def update_battery_level(self) -> float:
         """Fetch and update current battery level of the device."""
