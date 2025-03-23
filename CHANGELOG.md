@@ -17,6 +17,7 @@ https://keepachangelog.com/en/1.0.0/
 
 - Makefile rule to build executable with PyInstaller
 - New field `report_descriptor` to `DeviceInfo`
+- Standalone script to debug HID devices and get battery status
 
 ### Changed
 
