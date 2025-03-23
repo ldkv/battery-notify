@@ -28,7 +28,10 @@ class Headset(BaseDevice):
         msg += [0] * (message_size - len(msg))
         return msg
 
-    def get_battery_level(self, device: HIDWrapper) -> int:
+    def get_battery_level(self, device: HIDWrapper | None = None) -> int:
+        if not device:
+            device = HIDWrapper(self.device_info.path)
+
         if not device.write(self.battery_message):
             return DEFAULT_BATTERY_LEVEL
 

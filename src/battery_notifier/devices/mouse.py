@@ -32,7 +32,10 @@ class Mouse(BaseDevice):
         msg[-2] = crc
         return msg
 
-    def get_battery_level(self, device: HIDWrapper) -> int:
+    def get_battery_level(self, device: HIDWrapper | None = None) -> int:
+        if not device:
+            device = HIDWrapper(self.device_info.path)
+
         if not device.send_feature_report(self.battery_message):
             return DEFAULT_BATTERY_LEVEL
 
