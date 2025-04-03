@@ -1,9 +1,7 @@
 import asyncio
-import json
 import logging
-import subprocess
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from bleak import BleakClient, BleakScanner
 
@@ -83,56 +81,18 @@ class BluetoothDevice:
         return f"{name}{battery}"
 
 
-def get_paired_devices() -> Dict[str, str]:
-    """Get list of paired Bluetooth devices using system_profiler."""
-    try:
-        # Run system_profiler to get Bluetooth information in JSON format
-        cmd = ["system_profiler", "SPBluetoothDataType", "-json"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        data = json.loads(result.stdout)
-
-        # Extract paired devices
-        paired_devices = {}
-        for controller in data.get("SPBluetoothDataType", []):
-            devices = controller.get("device_connected", [])
-            for device in devices:
-                for name, device_info in device.items():
-                    address = device_info.get("device_address")
-                    if address:
-                        paired_devices[address] = name
-                    logger.info(f"Found paired device: {name} ({address})")
-
-        return paired_devices
-    except Exception as e:
-        logger.error(f"Error getting paired devices: {e}")
-        return {}
-
-
 async def get_connected_devices() -> List[BluetoothDevice]:
-    """Get battery levels for paired Bluetooth devices."""
+    """Get battery levels for connected Bluetooth devices."""
     devices = []
-    logger.info("Getting paired Bluetooth devices...")
-
-    # Get list of paired devices
-    paired_devices = get_paired_devices()
-    if not paired_devices:
-        logger.info("No paired devices found")
-        return devices
+    logger.info("Scanning for Bluetooth devices...")
 
     try:
         # Scan for devices
-        discovered_devices = await BleakScanner.discover(
-            # return_adv=True,
-            # service_uuids=args.services,
-            # cb={"use_bdaddr": True},
-        )
+        discovered_devices = await BleakScanner.discover(timeout=5.0, return_adv=True)
 
-        for device in discovered_devices:
-            if device.address not in paired_devices:
-                continue
-
-            logger.info(f"Checking paired device: {device.name} ({device.address})")
-            bluetooth_device = BluetoothDevice(name=paired_devices[device.address], address=device.address)
+        for device, adv_data in discovered_devices.items():
+            logger.info(f"Found device: {device} ({adv_data})")
+            bluetooth_device = BluetoothDevice(name=device or "Unknown Device", address=adv_data)
             if await bluetooth_device.get_battery_level():
                 devices.append(bluetooth_device)
 
@@ -143,17 +103,13 @@ async def get_connected_devices() -> List[BluetoothDevice]:
 
 
 async def main():
-    address = "E2:F6:31:9D:E1:F5"
-    # bluetooth_device = BluetoothDevice(name="Keychron K2 HE", address=address)
-    # if await bluetooth_device.get_battery_level():
-    #     print(bluetooth_device)
     devices = await get_connected_devices()
 
     if not devices:
-        print("\nNo paired Bluetooth devices found with battery information")
+        print("\nNo Bluetooth devices found with battery information")
         return
 
-    print("\nPaired Bluetooth devices with battery levels:")
+    print("\nBluetooth devices with battery levels:")
     for device in devices:
         print(f"- {device}")
 
