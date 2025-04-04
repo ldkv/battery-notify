@@ -106,6 +106,105 @@ class HIDWrapper:
 
         return []
 
+    def get_battery_level(self, report_id: int = 0, report_size: int = 8) -> int:
+        """
+        Request and read battery level from input report.
+        
+        Args:
+            report_id: The report ID for battery information (usually 0)
+            report_size: Expected size of the battery report
+            
+        Returns:
+            Battery level as percentage (0-100) or -1 if error
+        """
+        try:
+            # First try to get battery level via feature report
+            feature_report = self.get_feature_report(report_id, report_size)
+            if feature_report:
+                # The battery level is often in the second byte (index 1)
+                return feature_report[1]
+            
+            # If feature report fails, try reading input report
+            # For DualSense, we need to read the input report
+            response = self.read(report_size, 1000)  # 1 second timeout
+            if not response:
+                logger.error("No response received for battery request")
+                return -1
+            
+            # Parse battery level from response
+            # For DualSense, battery info is in bytes 52-53 (USB) or 53-54 (Bluetooth)
+            # Format:
+            # Byte 52/53: 
+            #   - Bits 0-3: Battery level (0-8, multiply by 12.5 to get percentage)
+            #   - Bit 5: Battery full
+            # Byte 53/54:
+            #   - Bit 3: Charging status
+            
+            # Try USB format first (byte 52)
+            if len(response) > 52:
+                battery_byte = response[52]
+                battery_level = (battery_byte & 0x0F) * 12.5  # Convert 0-8 to 0-100%
+                return int(battery_level)
+            
+            # Try Bluetooth format (byte 53)
+            if len(response) > 53:
+                battery_byte = response[53]
+                battery_level = (battery_byte & 0x0F) * 12.5  # Convert 0-8 to 0-100%
+                return int(battery_level)
+            
+            logger.error("Response too short to contain battery information")
+            return -1
+            
+        except Exception as e:
+            logger.error(f"Error getting battery level: {e}")
+            return -1
+
+    def get_dualsense_battery_info(self) -> tuple[int, bool, bool]:
+        """
+        Get detailed battery information from DualSense controller.
+        
+        Returns:
+            Tuple of (battery_level, is_charging, is_full)
+            battery_level: Percentage (0-100)
+            is_charging: True if charging
+            is_full: True if fully charged
+        """
+        try:
+            # Read a large enough report to get battery info
+            response = self.read(64, 1000)  # Read 64 bytes with 1 second timeout
+            if not response:
+                logger.error("No response received from DualSense")
+                return (-1, False, False)
+            
+            # Try USB format first (bytes 52-53)
+            if len(response) > 53:
+                battery_byte = response[52]
+                charging_byte = response[53]
+                
+                battery_level = (battery_byte & 0x0F) * 12.5  # Convert 0-8 to 0-100%
+                is_full = bool(battery_byte & 0x20)  # Bit 5 indicates full charge
+                is_charging = bool(charging_byte & 0x08)  # Bit 3 indicates charging
+                
+                return (int(battery_level), is_charging, is_full)
+            
+            # Try Bluetooth format (bytes 53-54)
+            if len(response) > 54:
+                battery_byte = response[53]
+                charging_byte = response[54]
+                
+                battery_level = (battery_byte & 0x0F) * 12.5  # Convert 0-8 to 0-100%
+                is_full = bool(battery_byte & 0x20)  # Bit 5 indicates full charge
+                is_charging = bool(charging_byte & 0x08)  # Bit 3 indicates charging
+                
+                return (int(battery_level), is_charging, is_full)
+            
+            logger.error("Response too short to contain battery information")
+            return (-1, False, False)
+            
+        except Exception as e:
+            logger.error(f"Error getting DualSense battery info: {e}")
+            return (-1, False, False)
+
     @staticmethod
     def enumerate_matching_devices(VID: int, PID: int) -> list[DeviceInfo]:
         raw_devices = hid.enumerate(VID, PID)
