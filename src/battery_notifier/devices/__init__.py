@@ -2,6 +2,7 @@ import logging
 from enum import Enum
 
 from .base import BaseDevice
+from .dualsense import DualSense
 from .headset import Headset
 from .mouse import Mouse
 
@@ -11,6 +12,7 @@ _ALL_DEVICES = {}
 class Device(Enum):
     RazerProClickMini = Mouse
     HyperXAlphaWireless = Headset
+    DualSense = DualSense
 
 
 def initialize_all_devices() -> dict[str, BaseDevice]:
