@@ -27,8 +27,9 @@ https://keepachangelog.com/en/1.0.0/
 - Bump `hdiapi` version to `0.14.0.post4`
 - Generate `uv.lock`
 - Move to `src` as package root
+- Update to template v0.5.3
 
-## [0.0.1] - 2023-10-06
+## [0.0.1] - 2024-10-06
 
 ### Added
 

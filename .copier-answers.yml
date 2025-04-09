@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier
-_commit: v0.3.0
+_commit: v0.5.3
 _src_path: gh:veesion-io/template-python-package.git
 package_description: Notify when battery is low
 package_name: battery_notifier

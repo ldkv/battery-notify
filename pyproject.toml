@@ -1,7 +1,7 @@
 [project]
 name = "battery_notifier"
 dynamic = ["version"]
-requires-python = "==3.13.2"
+requires-python = "==3.12.*"
 description = "Notify when battery is low"
 readme = "README.md"
 authors = [{ name = "Vu LE", email = "ledkvu@gmail.com" }]
@@ -30,6 +30,28 @@ Changelog = "https://github.com/ldkv/battery_notifier/blob/main/CHANGELOG.md"
 # uv configurations
 [tool.uv]
 package = true
+
+# https://callowayproject.github.io/bump-my-version/
+[tool.bumpversion]
+current_version = "v0.0.0"
+allow_dirty = false
+commit = true
+
+# Generate new version in CHANGELOG.md ONLY if there are changes under [Unreleased] section
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "[Unreleased]\n\n###"
+replace = "[Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}\n\n###"
+
+# Update version and date in package source __about__.py
+[[tool.bumpversion.files]]
+filename = "src/battery_notifier/__about__.py"
+regex = true
+search = """__version__ = \"{current_version}\"
+__date__ = \"\\d{{4}}-\\d{{2}}-\\d{{2}}\""""
+replace = """__version__ = \"{new_version}\"
+__date__ = \"{now:%Y-%m-%d}\""""
+
 
 # Ruff: code formatter + linter
 [tool.ruff]
