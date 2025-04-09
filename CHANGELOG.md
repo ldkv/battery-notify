@@ -13,6 +13,8 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-04-09
+
 ### Added
 
 - Makefile rule to build executable with PyInstaller
