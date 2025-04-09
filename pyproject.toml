@@ -33,7 +33,7 @@ package = true
 
 # https://callowayproject.github.io/bump-my-version/
 [tool.bumpversion]
-current_version = "v0.0.0"
+current_version = "v0.0.1"
 allow_dirty = false
 commit = true
 
@@ -47,7 +47,7 @@ replace = "[Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}\n\n###"
 [[tool.bumpversion.files]]
 filename = "src/battery_notifier/__about__.py"
 regex = true
-search = """__version__ = \"{current_version}\"
+search = """__version__ = \"v{current_version}\"
 __date__ = \"\\d{{4}}-\\d{{2}}-\\d{{2}}\""""
 replace = """__version__ = \"{new_version}\"
 __date__ = \"{now:%Y-%m-%d}\""""

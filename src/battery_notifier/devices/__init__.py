@@ -3,15 +3,15 @@ from enum import Enum
 
 from .base import BaseDevice
 from .dualsense import DualSense
-from .headset import Headset
-from .mouse import Mouse
+from .headset import HyperXCloudAlphaWireless
+from .mouse import RazerProClickMini
 
 _ALL_DEVICES = {}
 
 
 class Device(Enum):
-    RazerProClickMini = Mouse
-    HyperXAlphaWireless = Headset
+    RazerProClickMini = RazerProClickMini
+    HyperXCloudAlphaWireless = HyperXCloudAlphaWireless
     DualSense = DualSense
 
 

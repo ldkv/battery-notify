@@ -5,7 +5,7 @@ from battery_notifier.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, Dev
 
 
 @dataclass
-class Mouse(BaseDevice):
+class RazerProClickMini(BaseDevice):
     VID: int = 0x1532
     PID: int = 0x009A
     device_info: DeviceInfo = DeviceInfo(interface_number=0)
@@ -48,6 +48,6 @@ class Mouse(BaseDevice):
 
 
 if __name__ == "__main__":
-    mouse = Mouse()
+    mouse = RazerProClickMini()
     battery_level = mouse.update_battery_level()
     print(f"{mouse.name} - Battery level: {battery_level}")
