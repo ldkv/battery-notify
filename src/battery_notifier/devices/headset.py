@@ -6,7 +6,7 @@ READ_TIMEOUT_MS = 1000
 
 
 @dataclass
-class Headset(BaseDevice):
+class HyperXCloudAlphaWireless(BaseDevice):
     VID: int = 0x03F0
     PID: int = 0x098D
     device_info: DeviceInfo = DeviceInfo(
@@ -40,6 +40,6 @@ class Headset(BaseDevice):
 
 
 if __name__ == "__main__":
-    headset = Headset()
+    headset = HyperXCloudAlphaWireless()
     battery_level = headset.update_battery_level()
     print(f"{headset.name} - Battery level: {battery_level}")
