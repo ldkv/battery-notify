@@ -1,6 +1,6 @@
 #!make
 
-.PHONY: help
+.PHONY: help env requirements build release
 
 .DEFAULT_GOAL := help
 
@@ -17,9 +17,16 @@ endef
 
 
 ##@ Development Environment
-env: ## Export environment variables from .env file if exists
-	$(call export_env,.env.default)
-	$(if $(wildcard .env),$(call export_env,.env))
+template-update: ## Update the project with the latest template version
+	copier update -A
+
+env: ## Export environment variables from .env - Generate from .env.default if not found
+	@if [ ! -f .env ]; then \
+		cp .env.default .env; \
+		echo "--- Generated .env from .env.default"; \
+	fi
+	$(call export_env, .env.default)
+	$(call export_env, .env)
 
 install_uv: ## Install uv if not found in PATH
 	@if ! uv -V ; then \
@@ -33,21 +40,15 @@ install_uv: ## Install uv if not found in PATH
 venv: install_uv env ## Initialize a new virtual environment in UV_PROJECT_ENVIRONMENT
 	uv venv --seed
 
-venv-activate: env ## Activate the virtual environment
+activate-venv: env ## Activate the virtual environment
 	. $(UV_PROJECT_ENVIRONMENT)/bin/activate && exec $$SHELL
 
 dev-install: requirements ## Install the package in development mode
 	uv pip install -e .
 
-template-update: ## Update the project with the latest template version
-	copier update -A
-
 ##@ Dependencies Management
 requirements: env ## Install all dependencies including dev, extras
 	uv sync
-
-requirements-purge: env ## Uninstall all dependencies from current environment
-	uv pip freeze | cut -d "@" -f1 | xargs uv pip uninstall
 
 # Execute uv with the variable UV_PROJECT_ENVIRONMENT defined in .env
 # Example: > make uv tree -- --outdated
@@ -76,7 +77,7 @@ test: env ## Run the tests in local environment
 test-lock: env ## Verify that uv.lock is up-to-date
 	uv lock --check
 
-test-ci: test test-lock ## Specific test command for GitHub CI environment
+test-ci: test-lock test ## Specific test command for GitHub CI environment
 
 check-all: lint-ci test ## Run all checks and tests
 
@@ -91,20 +92,23 @@ build: env ## Build the package - for dev purposes
 publish: env build ## Publish the package to devpi
 	@uv publish
 
-current_version: ## Get current package version
-	$(eval version := $(shell uv run python -c "from src.battery_notifier import __version__; print(__version__)"))
-	@echo "Current version is: $(version)"
-
-bump: current_version ## Commit version bump changes for production
-	git add src/battery_notifier/__about__.py CHANGELOG.md
-	git diff --quiet && git diff --staged --quiet || git commit -m "Release $(version)"
-	git diff --quiet origin/HEAD || git push origin HEAD
+bump: ## Commit version bump for production
+	@if [ -z "$(version)" ] || ! [[ "$(version)" =~ v ]]; then \
+		echo "Invalid version provided, must be under the format vX.X.X, skipping bump."; \
+		echo "Example: make bump version=v1.2.3"; \
+		exit 1; \
+	elif ! bump-my-version bump --new-version $(version) -vv; then \
+		echo "Version bump failed, abort."; \
+		exit 1; \
+	fi; \
+	git push;
 
 release: bump ## Release a new version via Github actions
 	git tag -a $(version) -m "Release $(version)"
-	git push origin $(version)
+	git push --tags
 
-gh-release: bump ## Release a new version using gh CLI
+
+gh-release: bump ## Release a new version with notes using gh CLI
 	gh release create $(version) --generate-notes
 
 
