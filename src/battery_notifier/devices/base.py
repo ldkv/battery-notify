@@ -17,9 +17,9 @@ class BaseDevice:
     battery_message: list[int] | None = field(init=False, default=None)
     battery_level: int = field(init=False, default=DEFAULT_BATTERY_LEVEL)
 
-    @abstractmethod
     def generate_battery_message(self) -> list[int]:
         """Generate message array to send to the device to retrieve battery."""
+        return []
 
     @abstractmethod
     def get_battery_level(self, device: HIDWrapper) -> int:

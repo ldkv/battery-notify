@@ -18,7 +18,7 @@ class DeviceInfo:
     usage: int | None = None
     usage_page: int | None = None
     bus_type: int | None = None
-    report_descriptor: str = ""
+    report_descriptor: str | None = None
 
     def matching_info(self, other_device: "DeviceInfo") -> bool:
         for key, device_value in self.__dict__.items():
