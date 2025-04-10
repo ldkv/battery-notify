@@ -6,6 +6,8 @@ from battery_notifier.logs import configure_logging, logger
 
 def execute_powershell_command(command: list[str]) -> str:
     command = ["pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", *command]
+
+    # Hide the console window
     startupinfo = subprocess.STARTUPINFO()
     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     startupinfo.wShowWindow = subprocess.SW_HIDE
