@@ -1,8 +1,7 @@
 import subprocess
-from pathlib import Path
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
-from battery_notifier.logs import logger
+from battery_notifier.logs import configure_logging, logger
 
 
 def execute_powershell_command(command: list[str]) -> str:
@@ -12,7 +11,7 @@ def execute_powershell_command(command: list[str]) -> str:
     startupinfo.wShowWindow = subprocess.SW_HIDE
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=True, startupinfo=startupinfo)
-        return result.stdout
+        return result.stdout.strip()
     except Exception as e:
         logger.error(f"An error occurred: {e}")
 
@@ -68,20 +67,49 @@ def is_device_connected(device_name: str) -> bool:
     return result_output.strip().lower() == "true"
 
 
-def get_bluetooth_battery_level(device_name: str) -> int:
-    script_path = Path(__file__).parent / "get_battery_level.ps1"
-    command = ["-File", script_path.as_posix(), device_name]
-    logger.info(f"Executing command: {command} - {device_name=}")
+def get_device_instance_id(device_name: str) -> list[str]:
+    command = [
+        "-Command",
+        f'Get-PnpDevice -FriendlyName "*{device_name}*"',
+        "|",
+        "Select-Object -ExpandProperty InstanceId",
+    ]
     result_output = execute_powershell_command(command)
+    return [line.strip() for line in result_output.split("\n")]
 
-    try:
-        return int(result_output)
-    except ValueError:
-        logger.error(f"Error getting battery level for {device_name}: {result_output}")
+
+def get_bluetooth_battery_level(device_name: str) -> int:
+    instance_ids = get_device_instance_id(device_name)
+    if not instance_ids:
         return DEFAULT_BATTERY_LEVEL
+
+    command = [
+        "-Command",
+        "Get-PnpDeviceProperty -InstanceId",
+        "instance_id",
+        "-KeyName",
+        "'{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2'",
+        "|",
+        "Where-Object { $_.Type -ne 'Empty' }",
+        "|",
+        "Select-Object -ExpandProperty Data",
+    ]
+    for instance_id in instance_ids:
+        command[2] = f'"{instance_id}"'
+        logger.info(f"Executing command: {' '.join(command)} - {device_name=}")
+        result_output = execute_powershell_command(command)
+        try:
+            result_output = int(result_output)
+            if result_output != DEFAULT_BATTERY_LEVEL:
+                return result_output
+        except ValueError:
+            logger.error(f"Error getting battery level for {device_name}: {result_output}")
+
+    return DEFAULT_BATTERY_LEVEL
 
 
 if __name__ == "__main__":
+    configure_logging()
     devices = get_available_bluetooth_devices()
     for device_name in devices:
         battery_level = get_bluetooth_battery_level(device_name)

@@ -12,7 +12,7 @@ _ALL_DEVICES = {}
 
 
 class BluetoothDevice(Enum):
-    WH_1000XM4 = "WH-1000XM4"
+    WH_1000XM4 = "WH-1000XM4 Hands-Free AG"
     Keychron_K2_HE = "Keychron K2 HE"
 
     def update_battery_level(self):

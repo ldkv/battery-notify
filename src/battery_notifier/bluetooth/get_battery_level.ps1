@@ -1,4 +1,4 @@
-$BTDeviceFriendlyName = $args[0]
+$BTDeviceFriendlyName = "WH-1000XM4 Hands-Free AG"
 $BTHDevices = Get-PnpDevice -FriendlyName "*$($BTDeviceFriendlyName)*"
 
 if (!$BTHDevices) {
