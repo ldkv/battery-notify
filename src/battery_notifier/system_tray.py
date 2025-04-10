@@ -3,9 +3,9 @@ import time
 from PIL import Image
 from pystray import Icon, Menu, MenuItem, _base
 
+from battery_notifier.all_devices import initialize_all_devices
 from battery_notifier.battery import BatteryThreshold
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
-from battery_notifier.devices import initialize_all_devices
 from battery_notifier.logs import logger
 
 CHECK_FREQUENCY = 60 * 10  # 10 minutes
