@@ -34,7 +34,7 @@ def get_available_bluetooth_devices() -> set[str]:
 
 def filter_connected_bluetooth_devices(devices: set[str]) -> set[str]:
     ignored_texts = {";1m", "Generic", "Service", "Bluetooth"}
-    ignored_devices = {"Microsoft Bluetooth Device"}
+    ignored_devices = {"microsoft bluetooth device", "dualsense wireless controller"}
     filtered_devices = set()
     for device_name in devices:
         if any(ignored_text in device_name for ignored_text in ignored_texts):
@@ -110,6 +110,17 @@ def get_bluetooth_battery_level(device_name: str) -> int:
             logger.error(f"Error getting battery level for {device_name}: {result_output}")
 
     return DEFAULT_BATTERY_LEVEL
+
+
+def get_bluetooth_devices_with_battery_level() -> list[tuple[str, int]]:
+    devices = get_available_bluetooth_devices()
+    devices_with_battery_level = []
+    for device_name in devices:
+        battery_level = get_bluetooth_battery_level(device_name)
+        logger.info(f"Battery level for {device_name}: {battery_level}")
+        devices_with_battery_level.append((device_name, battery_level))
+
+    return devices_with_battery_level
 
 
 if __name__ == "__main__":

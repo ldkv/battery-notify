@@ -5,6 +5,7 @@ from pystray import Icon, Menu, MenuItem, _base
 
 from battery_notifier.all_devices import initialize_all_devices
 from battery_notifier.battery import BatteryThreshold
+from battery_notifier.bluetooth.windows_devices import get_bluetooth_devices_with_battery_level
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.logs import logger
 
@@ -37,6 +38,7 @@ def device_loop(system_tray: _base.Icon):
 def update_system_tray(system_tray: _base.Icon):
     """Update system tray icon and title base on devices' battery levels."""
     all_devices = initialize_all_devices()
+    all_bluetooth_devices = get_bluetooth_devices_with_battery_level()
     title_text = ""
     min_battery = 100
     for device in all_devices.values():
@@ -47,6 +49,13 @@ def update_system_tray(system_tray: _base.Icon):
             battery_level = min_battery + 1
         min_battery = min(min_battery, battery_level)
         title_text += f"{device.name}: {battery_text}\n"
+
+    for device_name, battery_level in all_bluetooth_devices:
+        if battery_level == DEFAULT_BATTERY_LEVEL:
+            continue
+
+        min_battery = min(min_battery, battery_level)
+        title_text += f"{device_name}: {battery_level}%\n"
 
     title_text = title_text.strip()
     system_tray.title = title_text
