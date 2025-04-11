@@ -13,6 +13,8 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-04-12
+
 ### Changed
 
 - Show battery level of all connected Bluetooth devices on Windows

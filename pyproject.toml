@@ -33,7 +33,7 @@ package = true
 
 # https://callowayproject.github.io/bump-my-version/
 [tool.bumpversion]
-current_version = "v0.2.0"
+current_version = "v0.2.1"
 allow_dirty = false
 commit = true
 
