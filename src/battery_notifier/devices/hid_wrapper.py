@@ -87,6 +87,14 @@ class HIDWrapper:
 
         return []
 
+    def get_input_report(self, report_id: int, report_size: int) -> list[int]:
+        try:
+            return self._device.get_input_report(report_id, report_size)  # type: ignore[union-attr]
+        except Exception as e:
+            logger.error(f"Error get_input_report: {e} / {report_id=} / {report_size=}")
+
+        return []
+
     def write(self, message: list[int] | None) -> bool:
         if message is None:
             return False
