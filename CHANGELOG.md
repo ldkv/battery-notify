@@ -13,6 +13,10 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+### Added
+
+- Module to get battery level of Bluetooth devices on Windows
+
 ### Changed
 
 - Move all devices initialization to `all_devices.py`
