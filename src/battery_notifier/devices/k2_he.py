@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 
 from battery_notifier.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, DeviceInfo, HIDWrapper
@@ -15,13 +16,13 @@ READ_TIMEOUT_MS = 1000
 class KeychronK2HE(BaseDevice):
     VID: int = 0x3434  # Keychron
     PID: int = 0xD030  # K2 HE D030 for USB - 0x0E20 for Bluetooth
-    device_info: DeviceInfo = DeviceInfo(usage_page=12)
+    device_info: DeviceInfo = DeviceInfo(usage_page=65376)
     battery_index: int = 8
     name: str = "Keychron K2 HE"
     type: str = "keyboard"
 
     def generate_battery_message(self) -> list[int]:
-        message_size = 52
+        message_size = 32
         self.report_id = 0x21
         msg = [
             self.report_id,
@@ -36,13 +37,22 @@ class KeychronK2HE(BaseDevice):
         # if not device.write(self.battery_message):
         #     return DEFAULT_BATTERY_LEVEL
         # report = device.read(32, 1000)
-        messages = [0x21, 0x09, 0x01, 0x02, 0x00, 0x00, 0x02, 0x00, 0x06, 0x00]
-        r = device.send_feature_report(messages)
-        messages[0] = 0xB2
-        messages[1] = 0x01
-        r = device.write(messages)
-        r = device.read(32, 1000)
-        report = device.get_input_report(0xB1, 32)
+        messages = [0x21, 0x09, 0x01, 0x02, 0x02, 0x00, 0x02, 0x00, 0x01, 0x00]
+        # r = device.send_feature_report(messages)
+        # time.sleep(0.4)
+        # report = device.get_feature_report(self.report_id, len(self.battery_message))  # type: ignore[arg-type]
+        messages = [0] * 33
+        messages[0] = 0x21
+        messages[1] = 0xA1
+        # messages[2] = 0xA1
+        # messages[2] = 0x0B
+        # messages[0] = 0xB1
+        # device.send_feature_report([0x21, 0xBB, 0x0B] + [0] * 49)
+        # messages[1] = 0x01
+        device.write(messages)
+        time.sleep(0.5)
+        report = device.read(33, 1000)
+        # report = device.get_input_report(0xB1, 32)
         if len(report) < self.battery_index + 1:
             return DEFAULT_BATTERY_LEVEL
 

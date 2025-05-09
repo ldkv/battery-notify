@@ -2,8 +2,8 @@
 
 import time
 
-from src.battery_notifier.devices.hid_wrapper import HIDWrapper
-from src.battery_notifier.logs import configure_logging, logger
+from battery_notifier.devices.hid_wrapper import HIDWrapper
+from battery_notifier.logs import configure_logging, logger
 
 
 def generate_battery_message() -> list[int]:
@@ -13,7 +13,7 @@ def generate_battery_message() -> list[int]:
 def get_battery_report_mouse_method(device: HIDWrapper) -> list[int]:
     battery_message = generate_battery_message()
     if not device.send_feature_report(battery_message):
-        return -1
+        return []
 
     time.sleep(0.4)
     report_id = battery_message[0]
@@ -40,8 +40,6 @@ def enumerate_all_devices(VID: int, PID: int) -> list[int]:
 
 if __name__ == "__main__":
     configure_logging()
-    VID: int = 0x03F0  # 0x19F5
-    PID: int = 0x098D  # 0x3247
     VID: int = 0x3434  # Keychron vendor ID
     PID: int = 0xD030  # Keychron Link product ID
     battery_report = enumerate_all_devices(VID, PID)
