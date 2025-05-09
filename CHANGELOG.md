@@ -13,6 +13,10 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+### Changed
+
+- Add method `get_input_report` to `HIDWrapper`
+
 ## [0.2.1] - 2025-04-12
 
 ### Changed
