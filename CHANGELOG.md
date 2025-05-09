@@ -16,6 +16,7 @@ https://keepachangelog.com/en/1.0.0/
 ### Changed
 
 - Add method `get_input_report` to `HIDWrapper`
+- Update executable name to `battery_notifier`
 
 ## [0.2.1] - 2025-04-12
 
