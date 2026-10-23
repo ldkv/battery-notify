@@ -3,6 +3,7 @@ from enum import Enum
 from .devices.base import BaseDevice
 from .devices.dualsense import DualSense
 from .devices.headset import HyperXCloudAlphaWireless
+from .devices.keyboard import KeychronK2HE
 from .devices.mouse import RazerProClickMini
 from .logs import logger
 
@@ -13,6 +14,7 @@ class HIDDevice(Enum):
     RazerProClickMini = RazerProClickMini
     HyperXCloudAlphaWireless = HyperXCloudAlphaWireless
     DualSense = DualSense
+    KeychronK2HE = KeychronK2HE
 
 
 def initialize_all_devices() -> dict[str, BaseDevice]:
