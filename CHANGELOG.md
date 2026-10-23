@@ -21,6 +21,7 @@ https://keepachangelog.com/en/1.0.0/
 ### Fixed
 
 - Skip the Bluetooth lookup outside Windows, it relies on PowerShell
+- Only open the HID interfaces matching the device filter during discovery: opening the others (e.g. keyboard) could trigger permission prompts or block them on macOS
 
 ## [0.2.1] - 2025-04-12
 
