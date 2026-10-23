@@ -1,6 +1,7 @@
 import pytest
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
+from battery_notifier.devices.hid_wrapper import HIDWrapper
 from battery_notifier.devices.keyboard import (
     FR_GET_STATE,
     KC_GET_BATTERY,
@@ -55,15 +56,17 @@ def test_parse_receiver_state(report, expected):
     assert parse_receiver_state(report) == expected
 
 
-class FakeReceiver:
+class FakeReceiver(HIDWrapper):
     """Replies to each written command with the given reports, in order."""
 
     def __init__(self, replies: dict[int, list[list[int]]]):
+        super().__init__()
         self.replies = replies
         self.pending: list[list[int]] = []
         self.written: list[list[int]] = []
 
-    def write(self, message: list[int]) -> bool:
+    def write(self, message: list[int] | None) -> bool:
+        assert message is not None
         self.written.append(message)
         self.pending = list(self.replies.get(message[1], []))
         return True
@@ -76,7 +79,7 @@ def get_battery_level(replies: dict[int, list[list[int]]]) -> tuple[int, FakeRec
     receiver = FakeReceiver(replies)
     keyboard = KeychronK2HE.__new__(KeychronK2HE)  # skip device discovery
     keyboard.name = "Keychron K2 HE"
-    return keyboard.get_battery_level(receiver), receiver  # type: ignore[arg-type]
+    return keyboard.get_battery_level(receiver), receiver
 
 
 def test_get_battery_level_connected():

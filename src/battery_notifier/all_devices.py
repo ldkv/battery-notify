@@ -7,7 +7,7 @@ from .devices.keyboard import KeychronK2HE
 from .devices.mouse import RazerProClickMini
 from .logs import logger
 
-_ALL_DEVICES = {}
+_ALL_DEVICES: dict[str, BaseDevice] = {}
 
 
 class HIDDevice(Enum):
