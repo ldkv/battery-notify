@@ -28,14 +28,14 @@ def get_available_bluetooth_devices() -> set[str]:
     Source: https://www.hexnode.com/mobile-device-management/help/script-to-show-a-list-of-connected-bluetooth-devices-on-windows-10-11/
     """
     select_command = "SELECT * FROM Win32_PnPEntity WHERE PNPClass = 'Bluetooth'"
-    command = ["-Command", f'Get-WmiObject -Query "{select_command}" | Select-Object Name']
+    command = ["-Command", f'Get-WmiObject -Query "{select_command}" | Select-Object -ExpandProperty Name']
     result_output = execute_powershell_command(command)
-    found_devices = {line.strip() for line in result_output.strip().split("\n")}
+    found_devices = {line.strip() for line in result_output.splitlines() if line.strip()}
     return filter_connected_bluetooth_devices(found_devices)
 
 
 def filter_connected_bluetooth_devices(devices: set[str]) -> set[str]:
-    ignored_texts = {";1m", "Generic", "Service", "Bluetooth"}
+    ignored_texts = {"Generic", "Service", "Bluetooth"}
     ignored_devices = {"microsoft bluetooth device", "dualsense wireless controller"}
     filtered_devices = set()
     for device_name in devices:
