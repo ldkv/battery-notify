@@ -52,7 +52,7 @@ class DualSense(BaseDevice):
         """
         Battery level is a number from 0 to 10 (0x0A).
         """
-        return int(battery_level * 10)
+        return battery_level * 10
 
 
 class BatteryState(Enum):

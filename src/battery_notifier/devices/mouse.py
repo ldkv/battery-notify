@@ -33,11 +33,11 @@ class RazerProClickMini(BaseDevice):
         return msg
 
     def get_battery_level(self, device: HIDWrapper) -> int:
-        if not device.send_feature_report(self.battery_message):
+        if self.battery_message is None or not device.send_feature_report(self.battery_message):
             return DEFAULT_BATTERY_LEVEL
 
         time.sleep(0.4)
-        report = device.get_feature_report(self.report_id, len(self.battery_message))  # type: ignore[arg-type]
+        report = device.get_feature_report(self.report_id, len(self.battery_message))
         # Battery level is a value between 0 and 255
         battery_255 = report[self.battery_index]
         return self.convert_battery_level(battery_255)

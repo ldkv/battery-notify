@@ -6,17 +6,18 @@ from battery_notifier.logs import configure_logging, logger
 
 
 def execute_powershell_command(command: list[str]) -> str:
-    command = ["pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", *command]
+    if sys.platform == "win32":
+        command = ["pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", *command]
 
-    # Hide the console window
-    startupinfo = subprocess.STARTUPINFO()  # type: ignore[attr-defined]
-    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore[attr-defined]
-    startupinfo.wShowWindow = subprocess.SW_HIDE  # type: ignore[attr-defined]
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, startupinfo=startupinfo)
-        return result.stdout.strip()
-    except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        # Hide the console window
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True, startupinfo=startupinfo)
+            return result.stdout.strip()
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
 
     return ""
 
