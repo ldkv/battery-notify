@@ -4,14 +4,20 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to (re)build and attach the executable to, e.g. v0.3.0"
+        type: string
+        required: true
 
 permissions:
   contents: write
   pull-requests: write
-  packages: write
 
 jobs:
   release-please:
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -45,3 +51,41 @@ jobs:
             git commit -m "chore: sync uv.lock"
             git push
           fi
+
+  # Runs after release-please creates a release, or manually for an existing tag
+  build:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+
+  publish:
+    needs: [release-please, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download executable
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-executable
+          path: dist
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum *.exe > SHA256SUMS.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*.exe
+
+      - name: Upload release assets
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
