@@ -1,6 +1,6 @@
 [project]
 name = "battery_notifier"
-dynamic = ["version"]
+version = "0.2.1"
 requires-python = "==3.14.9"
 description = "Notify when battery is low"
 readme = "README.md"
@@ -10,48 +10,19 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["hidapi==0.15.0", "pystray==0.19.5"]
+dependencies = ["hidapi==0.15.0", "pillow==13.0.0", "pystray==0.19.5"]
 
 [dependency-groups]
 dev = ["pyinstaller==6.22.3", "pyrefly==1.4.0", "pytest==9.1.1", "ruff==0.17.2"]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/battery_notifier/__about__.py"
+requires = ["uv_build>=0.13.5,<0.14"]
+build-backend = "uv_build"
 
 [project.urls]
-Repository = "https://github.com/ldkv/battery_notifier"
-Documentation = "https://github.com/ldkv/battery_notifier/blob/main/README.md"
-Changelog = "https://github.com/ldkv/battery_notifier/blob/main/CHANGELOG.md"
-
-# uv configurations
-[tool.uv]
-package = true
-
-# https://callowayproject.github.io/bump-my-version/
-[tool.bumpversion]
-current_version = "v0.2.1"
-allow_dirty = false
-commit = true
-
-# Generate new version in CHANGELOG.md ONLY if there are changes under [Unreleased] section
-[[tool.bumpversion.files]]
-filename = "CHANGELOG.md"
-search = "[Unreleased]\n\n###"
-replace = "[Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}\n\n###"
-
-# Update version and date in package source __about__.py
-[[tool.bumpversion.files]]
-filename = "src/battery_notifier/__about__.py"
-regex = true
-search = """__version__ = \"v{current_version}\"
-__date__ = \"\\d{{4}}-\\d{{2}}-\\d{{2}}\""""
-replace = """__version__ = \"v{new_version}\"
-__date__ = \"{now:%Y-%m-%d}\""""
-
+Repository = "https://github.com/ldkv/battery-notify"
+Documentation = "https://github.com/ldkv/battery-notify/blob/main/README.md"
+Changelog = "https://github.com/ldkv/battery-notify/releases"
 
 # Ruff: code formatter + linter
 [tool.ruff]
