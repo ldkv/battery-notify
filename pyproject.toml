@@ -1,7 +1,7 @@
 [project]
 name = "battery_notifier"
 dynamic = ["version"]
-requires-python = "==3.12.*"
+requires-python = "==3.14.9"
 description = "Notify when battery is low"
 readme = "README.md"
 authors = [{ name = "Vu LE", email = "ledkvu@gmail.com" }]
@@ -10,10 +10,10 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["hidapi==0.14.0.post4", "pystray==0.19.5"]
+dependencies = ["hidapi==0.15.0", "pystray==0.19.5"]
 
 [dependency-groups]
-dev = ["mypy==1.15.0", "pyinstaller>=6.10.0", "pytest==8.3.5", "ruff==0.11.2"]
+dev = ["mypy==1.15.0", "pyinstaller==6.22.3", "pytest==9.1.1", "ruff==0.17.2"]
 
 [build-system]
 requires = ["hatchling"]
