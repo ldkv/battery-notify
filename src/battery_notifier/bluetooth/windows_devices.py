@@ -1,4 +1,5 @@
 import subprocess
+import sys
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.logs import configure_logging, logger
@@ -113,6 +114,9 @@ def get_bluetooth_battery_level(device_name: str) -> int:
 
 
 def get_bluetooth_devices_with_battery_level() -> list[tuple[str, int]]:
+    if sys.platform != "win32":
+        return []
+
     devices = get_available_bluetooth_devices()
     devices_with_battery_level = []
     for device_name in devices:

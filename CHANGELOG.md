@@ -18,6 +18,10 @@ https://keepachangelog.com/en/1.0.0/
 - Add method `get_input_report` to `HIDWrapper`
 - Update executable name to `battery_notifier`
 
+### Fixed
+
+- Skip the Bluetooth lookup outside Windows, it relies on PowerShell
+
 ## [0.2.1] - 2025-04-12
 
 ### Changed
