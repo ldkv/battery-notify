@@ -31,7 +31,7 @@ class BaseDevice:
         logger.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
     def match_device_info(self):
-        found_devices = HIDWrapper.enumerate_matching_devices(self.VID, self.PID)
+        found_devices = HIDWrapper.enumerate_matching_devices(self.VID, self.PID, self.device_info)
         for device in found_devices:
             if self.device_info.matching_info(device):
                 return device

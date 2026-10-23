@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import hid
 
@@ -115,10 +115,19 @@ class HIDWrapper:
         return []
 
     @staticmethod
-    def enumerate_matching_devices(VID: int, PID: int) -> list[DeviceInfo]:
+    def enumerate_matching_devices(VID: int, PID: int, device_filter: DeviceInfo | None = None) -> list[DeviceInfo]:
+        """
+        List devices matching VID/PID with their report descriptor.
+        Only devices matching `device_filter` are opened: opening other interfaces (e.g. keyboard)
+        could require extra permissions or block them while open on macOS.
+        """
         raw_devices = hid.enumerate(VID, PID)
+        pre_filter = replace(device_filter, report_descriptor=None) if device_filter else DeviceInfo()
         devices = []
         for device in raw_devices:
+            if not pre_filter.matching_info(DeviceInfo(**device)):
+                continue
+
             hid_device = HIDWrapper(device["path"])
             if not hid_device:
                 continue
