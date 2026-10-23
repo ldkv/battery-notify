@@ -13,6 +13,10 @@ https://keepachangelog.com/en/1.0.0/
 
 ## [Unreleased]
 
+### Added
+
+- Device implementation for keyboard `Keychron K2 HE` via the 2.4 GHz receiver, requires custom firmware (see `docs/keychron-k2-he.md`)
+
 ### Changed
 
 - Add method `get_input_report` to `HIDWrapper`

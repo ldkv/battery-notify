@@ -8,6 +8,14 @@ This repository is generated and synced from [template-python-package](https://g
 
 Notify when battery is low
 
+## Supported devices
+
+- Razer Pro Click Mini
+- HyperX Cloud Alpha Wireless
+- DualSense controller
+- Keychron K2 HE via the 2.4 GHz receiver, with custom firmware: see [docs/keychron-k2-he.md](docs/keychron-k2-he.md)
+- Bluetooth devices with battery level on Windows
+
 ## Battery icons
 
 Assets downloaded from [flaticon](https://www.flaticon.com/).
