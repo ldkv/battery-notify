@@ -3,6 +3,7 @@ import time
 from PIL import Image
 from pystray import Icon, Menu, MenuItem, _base
 
+from battery_notifier import __version__
 from battery_notifier.all_devices import initialize_all_devices
 from battery_notifier.battery import BatteryThreshold
 from battery_notifier.bluetooth.windows_devices import get_bluetooth_devices_with_battery_level
@@ -21,6 +22,7 @@ def initialize_system_tray() -> _base.Icon:
         title="No device found yet",
         menu=Menu(
             MenuItem(text="Left-Click-Action", action=update_system_tray, default=True, visible=False),
+            MenuItem(f"Battery Notifier v{__version__}", None, enabled=False),
             MenuItem("Quit", Icon.stop),
         ),
     )
