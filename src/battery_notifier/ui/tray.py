@@ -61,7 +61,10 @@ class TrayApp:
         """Separate thread to check battery levels of all devices."""
         while True:
             self.wake.clear()
-            self.update()
+            try:
+                self.update()
+            except Exception:
+                logger.exception("Error checking batteries")
             interval = self.settings.check_interval_minutes * 60
             logger.info(f"Next check in {interval} seconds...")
             self.wake.wait(interval)

@@ -91,6 +91,7 @@ tasks:
         --windows-console-mode=disable
         --enable-plugin=tk-inter
         --include-distribution-metadata=battery_notifier
+        --include-package=winrt
         --product-name="Battery Notifier"
         --product-version={{.VERSION}}
         --file-version={{.VERSION}}
