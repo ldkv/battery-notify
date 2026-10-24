@@ -41,6 +41,7 @@ def test_errors_do_not_move_anything(dialog, field, value, error):
     dialog.numbers[field].set(value)
     assert layout(dialog) == before
     assert dialog.status.cget("text") == error
+    assert str(dialog.status.cget("foreground")) == dialog.error_color
     assert dialog.spinboxes[field].instate(["invalid"])
     assert dialog.save_button.instate(["disabled"])
     save_screenshot(dialog, f"error-{field}.png")

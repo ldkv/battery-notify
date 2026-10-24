@@ -44,8 +44,8 @@ class SettingsDialog:
         theme = "dark" if platform.apps_use_dark_theme() else "light"
         sv_ttk.set_theme(theme)
         style = ttk.Style()
-        style.configure("Error.TLabel", foreground=ERROR_COLORS[theme])
-        style.configure("Caption.TLabel", foreground=CAPTION_COLORS[theme])
+        # Set on each label: sv_ttk overrides the foreground of custom label styles
+        self.error_color, self.caption_color = ERROR_COLORS[theme], CAPTION_COLORS[theme]
 
         frame = ttk.Frame(self.root, padding=PADDING)
         frame.grid(sticky="nsew")
@@ -65,13 +65,13 @@ class SettingsDialog:
             row += 1
 
         # One error at a time, below the form: the invalid fields have a red border
-        self.status = ttk.Label(frame, style="Error.TLabel")
+        self.status = ttk.Label(frame, foreground=self.error_color)
         self.status.grid(row=row, column=0, columnspan=2, sticky="w")
         row += 1
 
         self.link_font = tkfont.Font(font=style.lookup("TLabel", "font") or "TkDefaultFont", underline=True)
         logs_link = ttk.Label(
-            frame, text="Open logs folder", style="Caption.TLabel", cursor="hand2", font=self.link_font
+            frame, text="Open logs folder", foreground=self.caption_color, cursor="hand2", font=self.link_font
         )
         logs_link.bind("<Button-1>", lambda _: platform.open_folder(log_dir()))
         logs_link.grid(row=row, column=0, sticky="w", pady=(ROW_GAP, 0))
@@ -91,7 +91,7 @@ class SettingsDialog:
         labels.grid(row=row, column=0, sticky="nw", padx=(0, PADDING), pady=(0, ROW_GAP))
         ttk.Label(labels, text=form_field.label).grid(sticky="w")
         if form_field.help_text:
-            ttk.Label(labels, text=form_field.help_text, style="Caption.TLabel").grid(sticky="w")
+            ttk.Label(labels, text=form_field.help_text, foreground=self.caption_color).grid(sticky="w")
 
         value = tk.StringVar(value=str(getattr(self.settings, form_field.name)))
         value.trace_add("write", lambda *_: self.refresh())
@@ -104,7 +104,7 @@ class SettingsDialog:
         group = ttk.LabelFrame(frame, text=form_field.label, padding=(PADDING // 2, 4))
         group.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, ROW_GAP))
         if form_field.help_text:
-            ttk.Label(group, text=form_field.help_text, style="Caption.TLabel").grid(sticky="w", pady=(0, 4))
+            ttk.Label(group, text=form_field.help_text, foreground=self.caption_color).grid(sticky="w", pady=(0, 4))
 
         disabled = getattr(self.settings, form_field.name)
         self.checklists[form_field.name] = {}
