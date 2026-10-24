@@ -65,8 +65,4 @@ class OSProvider:
         self._read_batteries = read_batteries
 
     def read(self, settings: Settings) -> list[BatteryReading]:
-        return [
-            BatteryReading(name, level)
-            for name, level in self._read_batteries()
-            if level != DEFAULT_BATTERY_LEVEL and settings.is_enabled(name)
-        ]
+        return [BatteryReading(name, level) for name, level in self._read_batteries() if settings.is_enabled(name)]

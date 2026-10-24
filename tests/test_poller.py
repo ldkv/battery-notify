@@ -47,8 +47,8 @@ def test_corrupted_seen_devices_file(seen_devices_file):
     assert load_seen_devices() == set()
 
 
-def test_os_provider_skips_disabled_and_unknown_levels():
-    provider = OSProvider(lambda: [("Earbuds", 70), ("Speaker", -1), ("Keyboard", 40)])
+def test_os_provider_skips_disabled_devices():
+    provider = OSProvider(lambda: [("Earbuds", 70), ("Keyboard", 40)])
     readings = provider.read(Settings(disabled_devices=frozenset({"Keyboard"})))
     assert readings == [BatteryReading("Earbuds", 70)]
 

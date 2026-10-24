@@ -11,7 +11,7 @@ class Platform:
     supports_autostart = False
 
     def bluetooth_batteries(self) -> list[tuple[str, int]]:
-        """Name and battery level of the connected devices the OS knows about."""
+        """Name and battery level of the connected devices whose level the OS knows."""
         return []
 
     def is_autostart_enabled(self) -> bool:
