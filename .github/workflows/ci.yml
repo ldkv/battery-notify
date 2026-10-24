@@ -31,3 +31,13 @@ jobs:
 
       - name: Check code quality and run tests
         run: task check-all
+        env:
+          DIALOG_SCREENSHOTS: ${{ github.workspace }}/screenshots
+
+      - name: Upload settings dialog screenshots
+        if: ${{ !cancelled() && runner.os == 'Windows' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: settings-dialog-errors
+          path: screenshots
+          if-no-files-found: ignore

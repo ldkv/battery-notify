@@ -33,8 +33,8 @@ class SettingsDialog:
         self.saved = False
         self.numbers: dict[str, tk.StringVar] = {}
         self.checklists: dict[str, dict[str, tk.BooleanVar]] = {}
-        self.errors: dict[str, ttk.Label] = {}
-        self.limits: dict[str, tuple[int | None, int | None]] = {}
+        self.spinboxes: dict[str, ttk.Spinbox] = {}
+        self.fields = {form_field.name: form_field for form_field in form_fields()}
 
         platform.enable_high_dpi()
         self.root = tk.Tk()
@@ -51,7 +51,7 @@ class SettingsDialog:
         frame.grid(sticky="nsew")
         frame.columnconfigure(0, weight=1)
         row = 0
-        for form_field in form_fields():
+        for form_field in self.fields.values():
             if form_field.kind is FieldKind.NUMBER:
                 self.add_number(frame, row, form_field)
             else:
@@ -63,6 +63,11 @@ class SettingsDialog:
             switch = ttk.Checkbutton(frame, text="Run at startup", variable=self.autostart, style="Switch.TCheckbutton")
             switch.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, ROW_GAP))
             row += 1
+
+        # One error at a time, below the form: the invalid fields have a red border
+        self.status = ttk.Label(frame, style="Error.TLabel")
+        self.status.grid(row=row, column=0, columnspan=2, sticky="w")
+        row += 1
 
         self.link_font = tkfont.Font(font=style.lookup("TLabel", "font") or "TkDefaultFont", underline=True)
         logs_link = ttk.Label(
@@ -91,13 +96,9 @@ class SettingsDialog:
         value = tk.StringVar(value=str(getattr(self.settings, form_field.name)))
         value.trace_add("write", lambda *_: self.refresh())
         self.numbers[form_field.name] = value
-        widgets = ttk.Frame(frame)
-        widgets.grid(row=row, column=1, sticky="ne", pady=(0, ROW_GAP))
-        spinbox = ttk.Spinbox(widgets, from_=form_field.min or 0, to=form_field.max or 0, textvariable=value, width=6)
-        spinbox.grid(sticky="e")
-        self.errors[form_field.name] = ttk.Label(widgets, style="Error.TLabel")
-        self.errors[form_field.name].grid(sticky="e")
-        self.limits[form_field.name] = (form_field.min, form_field.max)
+        spinbox = ttk.Spinbox(frame, from_=form_field.min or 0, to=form_field.max or 0, textvariable=value, width=6)
+        spinbox.grid(row=row, column=1, sticky="ne", pady=(0, ROW_GAP))
+        self.spinboxes[form_field.name] = spinbox
 
     def add_checklist(self, frame: ttk.Frame, row: int, form_field: FormField):
         group = ttk.LabelFrame(frame, text=form_field.label, padding=(PADDING // 2, 4))
@@ -128,10 +129,15 @@ class SettingsDialog:
 
     def refresh(self):
         _, errors = self.edited_settings()
-        for name, label in self.errors.items():
-            # A space keeps the line height, so that rows below do not move
-            label.configure(text=errors.get(name, " "))
+        for name, spinbox in self.spinboxes.items():
+            spinbox.state(["invalid"] if name in errors else ["!invalid"])
+        first = next((name for name in self.fields if name in errors), None)
+        # A space keeps the line height, so that the buttons below do not move
+        self.status.configure(text=self.error_text(first, errors[first]) if first else " ")
         self.save_button.state(["disabled"] if errors else ["!disabled"])
+
+    def error_text(self, name: str, message: str) -> str:
+        return f"\u26a0 {self.fields[name].label}: {message[0].lower()}{message[1:]}"
 
     def save(self):
         settings, errors = self.edited_settings()
@@ -145,11 +151,14 @@ class SettingsDialog:
         self.root.destroy()
 
     def fix_size(self):
-        """Size and center the window for the longest error messages, so that showing one never resizes it."""
-        for name, label in self.errors.items():
-            low, high = self.limits[name]
-            messages = [RANGE_ERROR.format(min=low, max=high), NOT_A_NUMBER, THRESHOLD_ERROR]
-            label.configure(text=max(messages, key=len))
+        """Size and center the window for the longest error message, so that showing one never resizes it."""
+        messages = [
+            self.error_text(name, message)
+            for name, form_field in self.fields.items()
+            if form_field.kind is FieldKind.NUMBER
+            for message in (RANGE_ERROR.format(min=form_field.min, max=form_field.max), NOT_A_NUMBER, THRESHOLD_ERROR)
+        ]
+        self.status.configure(text=max(messages, key=len))
         self.root.update_idletasks()
         width, height = self.root.winfo_reqwidth(), self.root.winfo_reqheight()
         self.refresh()
