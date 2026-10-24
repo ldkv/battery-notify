@@ -103,3 +103,22 @@ tasks:
         --output-dir=dist
         --output-filename=battery_notifier.exe
         --assume-yes-for-downloads
+
+  rust-check:
+    desc: Verify formatting and linting of the Rust version
+    dir: rust
+    cmds:
+      - cargo fmt --check
+      - cargo clippy --locked --all-targets -- -D warnings
+
+  rust-test:
+    desc: Run the tests of the Rust version
+    dir: rust
+    cmds:
+      - cargo test --locked
+
+  rust-build:
+    desc: Build the release executable of the Rust version into rust/target/release/
+    dir: rust
+    cmds:
+      - cargo build --release --locked
