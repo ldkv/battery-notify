@@ -38,13 +38,15 @@ class SettingsDialog:
 
         platform.enable_high_dpi()
         self.root = tk.Tk()
+        self.root.withdraw()  # shown once laid out and centered
         self.root.title("Battery Notifier settings")
         self.root.resizable(False, False)
         self.root.iconphoto(True, tk.PhotoImage(file=image_path("battery-full.png")))
         theme = "dark" if platform.apps_use_dark_theme() else "light"
         sv_ttk.set_theme(theme)
+        # sv_ttk recolors every existing widget once the theme change is processed: do it before creating any
+        self.root.update_idletasks()
         style = ttk.Style()
-        # Set on each label: sv_ttk overrides the foreground of custom label styles
         self.error_color, self.caption_color = ERROR_COLORS[theme], CAPTION_COLORS[theme]
 
         frame = ttk.Frame(self.root, padding=PADDING)
@@ -165,6 +167,7 @@ class SettingsDialog:
         x = (self.root.winfo_screenwidth() - width) // 2
         y = (self.root.winfo_screenheight() - height) // 3
         self.root.geometry(f"{width}x{height}+{x}+{y}")
+        self.root.deiconify()
 
     def run(self) -> bool:
         """Show the dialog until closed, return True if the settings were saved."""
