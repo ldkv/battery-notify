@@ -1,8 +1,8 @@
 import pytest
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
-from battery_notifier.devices.hid_wrapper import HIDWrapper
-from battery_notifier.devices.keyboard import (
+from battery_notifier.core.devices.hid_wrapper import HIDWrapper
+from battery_notifier.core.devices.keyboard import (
     FR_GET_STATE,
     KC_GET_BATTERY,
     KeychronK2HE,

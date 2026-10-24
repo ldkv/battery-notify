@@ -3,7 +3,6 @@ from pathlib import Path
 
 ASSET_DIR = "assets"
 DEFAULT_BATTERY_LEVEL = -1
-NOTIFICATION_THRESHOLD = 20
 
 
 def resource_path(relative_path: str) -> Path:
