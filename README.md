@@ -60,4 +60,5 @@ The dialog can also be opened from a terminal with `battery-notifier settings`.
 - HyperX Cloud Alpha Wireless
 - DualSense controller
 - Keychron K2 HE via the 2.4 GHz receiver, with custom firmware: see [docs/keychron-k2-he.md](docs/keychron-k2-he.md)
+- Keychron M6 8K via the 2.4 GHz receiver Keychron Ultra-Link 8K, tested on Windows: see [docs/keychron-m6.md](docs/keychron-m6.md)
 - Bluetooth devices with battery level on Windows
