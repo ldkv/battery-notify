@@ -46,7 +46,7 @@ class SettingsDialog:
         sv_ttk.set_theme(theme)
         # sv_ttk recolors every existing widget once the theme change is processed: do it before creating any
         self.root.update_idletasks()
-        style = ttk.Style()
+        self.body_font = ttk.Style().lookup("TLabel", "font") or "TkDefaultFont"
         self.error_color, self.caption_color = ERROR_COLORS[theme], CAPTION_COLORS[theme]
 
         frame = ttk.Frame(self.root, padding=PADDING)
@@ -71,7 +71,9 @@ class SettingsDialog:
         self.status.grid(row=row, column=0, columnspan=2, sticky="w")
         row += 1
 
-        self.link_font = tkfont.Font(font=style.lookup("TLabel", "font") or "TkDefaultFont", underline=True)
+        # Font(font=...) ignores the other options: underline the copy afterwards
+        self.link_font = tkfont.Font(font=self.body_font)
+        self.link_font.configure(underline=True)
         logs_link = ttk.Label(
             frame, text="Open logs folder", foreground=self.caption_color, cursor="hand2", font=self.link_font
         )
@@ -98,7 +100,15 @@ class SettingsDialog:
         value = tk.StringVar(value=str(getattr(self.settings, form_field.name)))
         value.trace_add("write", lambda *_: self.refresh())
         self.numbers[form_field.name] = value
-        spinbox = ttk.Spinbox(frame, from_=form_field.min or 0, to=form_field.max or 0, textvariable=value, width=6)
+        # sv_ttk only sets the font of entries that exist when the theme is applied
+        spinbox = ttk.Spinbox(
+            frame,
+            from_=form_field.min or 0,
+            to=form_field.max or 0,
+            textvariable=value,
+            width=6,
+            font=self.body_font,
+        )
         spinbox.grid(row=row, column=1, sticky="ne", pady=(0, ROW_GAP))
         self.spinboxes[form_field.name] = spinbox
 
