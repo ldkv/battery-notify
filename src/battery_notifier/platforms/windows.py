@@ -6,9 +6,9 @@ import winreg
 from ctypes import wintypes
 from pathlib import Path
 
-from battery_notifier.bluetooth.windows_devices import get_bluetooth_devices_with_battery_level
 from battery_notifier.launcher import app_command, is_frozen
 from battery_notifier.platforms.base import Platform
+from battery_notifier.platforms.windows_bluetooth import bluetooth_batteries
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 RUN_VALUE = "BatteryNotifier"
@@ -26,7 +26,7 @@ class WindowsPlatform(Platform):
         self._mutexes: list[int] = []
 
     def bluetooth_batteries(self) -> list[tuple[str, int]]:
-        return get_bluetooth_devices_with_battery_level()
+        return bluetooth_batteries()
 
     def is_autostart_enabled(self) -> bool:
         try:
