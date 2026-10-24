@@ -9,11 +9,11 @@ from battery_notifier.core.devices.base import BaseDevice
 from battery_notifier.core.devices.dualsense import DualSense
 from battery_notifier.core.devices.headset import HyperXCloudAlphaWireless
 from battery_notifier.core.devices.keyboard import KeychronK2HE
-from battery_notifier.core.devices.mouse import RazerProClickMini
+from battery_notifier.core.devices.mouse import KeychronM6, RazerProClickMini
 from battery_notifier.core.settings import Settings
 from battery_notifier.logs import logger
 
-HID_DEVICES: list[type[BaseDevice]] = [RazerProClickMini, HyperXCloudAlphaWireless, DualSense, KeychronK2HE]
+HID_DEVICES: list[type[BaseDevice]] = [RazerProClickMini, HyperXCloudAlphaWireless, DualSense, KeychronK2HE, KeychronM6]
 
 
 @dataclass(frozen=True)
