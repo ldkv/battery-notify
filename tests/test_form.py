@@ -4,7 +4,13 @@ from battery_notifier.ui.form import FieldKind, FormField, form_fields
 def test_form_is_generated_from_settings():
     form = {form_field.name: form_field for form_field in form_fields()}
 
-    assert list(form) == ["check_interval_minutes", "low_threshold", "critical_threshold", "disabled_devices"]
+    assert list(form) == [
+        "check_interval_minutes",
+        "low_threshold",
+        "critical_threshold",
+        "renotify_minutes",
+        "disabled_devices",
+    ]
     assert form["check_interval_minutes"] == FormField(
         "check_interval_minutes", "Check interval (minutes)", FieldKind.NUMBER, min=1, max=120
     )

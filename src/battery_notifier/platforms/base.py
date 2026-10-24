@@ -27,6 +27,13 @@ class Platform:
     def apps_use_dark_theme(self) -> bool:
         return False
 
+    def taskbar_uses_dark_theme(self) -> bool:
+        return False
+
+    def icon_font(self) -> Path | None:
+        """Font with the Segoe battery glyphs, None to draw the tray icon instead."""
+        return None
+
     def enable_high_dpi(self):
         """Render GUI windows sharply on high DPI screens."""
 

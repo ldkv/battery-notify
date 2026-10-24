@@ -9,14 +9,15 @@ from dataclasses import replace
 from tkinter import ttk
 
 import sv_ttk
+from PIL import ImageTk
 
-from battery_notifier.configs import image_path
 from battery_notifier.core.paths import log_dir
 from battery_notifier.core.poller import known_device_names
 from battery_notifier.core.settings import RANGE_ERROR, THRESHOLD_ERROR, Settings
 from battery_notifier.logs import logger
 from battery_notifier.platforms.base import Platform
 from battery_notifier.ui.form import FieldKind, FormField, form_fields
+from battery_notifier.ui.icon import icon_renderer
 
 PADDING = 20
 ROW_GAP = 12
@@ -41,7 +42,9 @@ class SettingsDialog:
         self.root.withdraw()  # shown once laid out and centered
         self.root.title("Battery Notifier settings")
         self.root.resizable(False, False)
-        self.root.iconphoto(True, tk.PhotoImage(file=image_path("battery-full.png")))
+        window_icon = icon_renderer(platform, platform.apps_use_dark_theme).render(None, settings)
+        self.window_icon = ImageTk.PhotoImage(window_icon)  # keep a reference, tk does not
+        self.root.iconphoto(True, self.window_icon)  # pyrefly: ignore[bad-argument-type]
         theme = "dark" if platform.apps_use_dark_theme() else "light"
         sv_ttk.set_theme(theme)
         # sv_ttk recolors every existing widget once the theme change is processed: do it before creating any

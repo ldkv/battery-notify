@@ -59,7 +59,3 @@ The dialog can also be opened from a terminal with `battery-notifier settings`.
 - DualSense controller
 - Keychron K2 HE via the 2.4 GHz receiver, with custom firmware: see [docs/keychron-k2-he.md](docs/keychron-k2-he.md)
 - Bluetooth devices with battery level on Windows
-
-## Battery icons
-
-Assets downloaded from [flaticon](https://www.flaticon.com/).

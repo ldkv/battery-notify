@@ -2,7 +2,6 @@
 from PyInstaller.utils.hooks import copy_metadata
 
 added_files = [
-    ("src/battery_notifier/assets", "assets"),
     # Needed by importlib.metadata to resolve __version__ in the frozen executable
     *copy_metadata("battery_notifier"),
 ]

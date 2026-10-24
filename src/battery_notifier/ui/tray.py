@@ -6,14 +6,14 @@ from pystray import Icon, Menu, MenuItem
 
 from battery_notifier import __version__
 from battery_notifier.core.paths import config_dir
-from battery_notifier.core.policy import lowest_level, should_notify
+from battery_notifier.core.policy import BatteryStatus, Notifier, battery_status, lowest_level
 from battery_notifier.core.poller import Poller
-from battery_notifier.core.providers import HIDProvider, OSProvider
+from battery_notifier.core.providers import BatteryReading, HIDProvider, OSProvider
 from battery_notifier.core.settings import Settings
 from battery_notifier.launcher import app_command, is_frozen
 from battery_notifier.logs import logger
 from battery_notifier.platforms.base import Platform
-from battery_notifier.ui.icon import PngIconRenderer
+from battery_notifier.ui.icon import icon_renderer
 
 NO_DEVICE_TEXT = "No device found yet"
 
@@ -23,7 +23,9 @@ class TrayApp:
         self.platform = platform
         self.settings = Settings.load()
         self.poller = Poller([HIDProvider(), OSProvider(platform.bluetooth_batteries)])
-        self.icon_renderer = PngIconRenderer()
+        self.icon_renderer = icon_renderer(platform, platform.taskbar_uses_dark_theme)
+        self.notifier = Notifier()
+        self.readings: list[BatteryReading] = []
         # Set to check the batteries right away instead of waiting for the next check
         self.wake = threading.Event()
         self.dialog: subprocess.Popen | None = None
@@ -31,15 +33,22 @@ class TrayApp:
             name="Battery Notifier",
             icon=self.icon_renderer.render(None, self.settings),
             title=NO_DEVICE_TEXT,
-            menu=Menu(
-                MenuItem(text="Left-Click-Action", action=self.wake.set, default=True, visible=False),
-                MenuItem(f"Battery Notifier v{__version__}", None, enabled=False),
-                Menu.SEPARATOR,
-                MenuItem("Settings…", self.open_settings),
-                MenuItem("Open settings folder", lambda: platform.open_folder(config_dir())),
-                MenuItem("Quit", Icon.stop),
-            ),
+            menu=Menu(self.menu_items),
         )
+
+    def menu_items(self):
+        yield MenuItem(text="Left-Click-Action", action=self.wake.set, default=True, visible=False)
+        for reading in self.readings:
+            yield MenuItem(format_reading(reading), None, enabled=False)
+        if not self.readings:
+            yield MenuItem(NO_DEVICE_TEXT, None, enabled=False)
+        yield Menu.SEPARATOR
+        yield MenuItem("Refresh", self.wake.set)
+        yield MenuItem("Settings…", self.open_settings)
+        yield MenuItem("Open settings folder", lambda: self.platform.open_folder(config_dir()))
+        yield Menu.SEPARATOR
+        yield MenuItem(f"Battery Notifier v{__version__}", None, enabled=False)
+        yield MenuItem("Quit", Icon.stop)
 
     def run(self):
         # Keep "run at startup" pointing to this executable, e.g. after an update
@@ -58,14 +67,14 @@ class TrayApp:
             self.wake.wait(interval)
 
     def update(self):
-        """Update tray icon and title from the devices' battery levels."""
-        readings = self.poller.poll(self.settings)
-        lines = [f"{reading.name}: {'N/A' if reading.level is None else f'{reading.level}%'}" for reading in readings]
-        self.icon.title = "\n".join(lines) or NO_DEVICE_TEXT
-        level = lowest_level(readings)
-        self.icon.icon = self.icon_renderer.render(level, self.settings)
-        if should_notify(level, self.settings):
-            self.icon.notify("Low Battery", self.icon.title)
+        """Update tray icon, title and menu from the devices' battery levels."""
+        self.readings = self.poller.poll(self.settings)
+        self.icon.title = "\n".join(map(format_reading, self.readings)) or NO_DEVICE_TEXT
+        self.icon.icon = self.icon_renderer.render(lowest_level(self.readings), self.settings)
+        self.icon.update_menu()
+        if due := self.notifier.due(self.readings, self.settings):
+            critical = any(battery_status(reading.level, self.settings) is BatteryStatus.CRITICAL for reading in due)
+            self.icon.notify("\n".join(map(format_reading, due)), "Critical battery" if critical else "Low battery")
 
     def open_settings(self):
         if self.dialog and self.dialog.poll() is None:
@@ -81,3 +90,7 @@ class TrayApp:
         self.settings = Settings.load()
         logger.info(f"Settings reloaded: {self.settings}")
         self.wake.set()
+
+
+def format_reading(reading: BatteryReading) -> str:
+    return f"{reading.name}: {'N/A' if reading.level is None else f'{reading.level}%'}"
