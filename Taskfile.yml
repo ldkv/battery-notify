@@ -82,6 +82,7 @@ tasks:
         sh: uv version --short
     cmds:
       # The unpacked files are cached per version, so only the first launch of a version unpacks them.
+      # Windows 10+ ships the Universal C runtime, no need to bundle it.
       # Keep the tempdir spec in sync with UNPACK_ROOT in src/battery_notifier/launcher.py
       - >-
         uv run python -m nuitka src/battery_notifier/main.py
@@ -92,6 +93,8 @@ tasks:
         --enable-plugin=tk-inter
         --include-distribution-metadata=battery_notifier
         --include-package=winrt
+        --include-windows-runtime-dlls=no
+        --python-flag=no_docstrings
         --product-name="Battery Notifier"
         --product-version={{.VERSION}}
         --file-version={{.VERSION}}
