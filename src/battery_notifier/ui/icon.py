@@ -19,8 +19,8 @@ COLORS = {
     BatteryStatus.CRITICAL: "#e81123",  # Windows red
 }
 THEME_COLORS = {True: "#ffffff", False: "#1c1c1c"}  # on dark / light background
-# Segoe Fluent Icons / Segoe MDL2 Assets: Battery0 to Battery10, then BatteryUnknown
-BATTERY_GLYPHS = [chr(code) for code in range(0xE850, 0xE85B)]
+# Segoe Fluent Icons / Segoe MDL2 Assets: Battery0 to Battery9, Battery10 is out of sequence
+BATTERY_GLYPHS = [chr(code) for code in range(0xE850, 0xE85A)] + ["\ue83f"]
 UNKNOWN_GLYPH = "\ue996"
 
 

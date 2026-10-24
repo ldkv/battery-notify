@@ -16,11 +16,15 @@ OPAQUE = 255
 
 
 @pytest.mark.parametrize(
-    "level, glyph",
-    [(None, UNKNOWN_GLYPH), (0, ""), (4, ""), (5, ""), (6, ""), (42, ""), (100, "")],
+    "level, code",
+    [(0, 0xE850), (4, 0xE850), (5, 0xE850), (6, 0xE851), (42, 0xE854), (90, 0xE859), (95, 0xE83F), (100, 0xE83F)],
 )
-def test_battery_glyph(level, glyph):
-    assert battery_glyph(level) == glyph
+def test_battery_glyph(level, code):
+    assert battery_glyph(level) == chr(code)
+
+
+def test_unknown_battery_glyph():
+    assert battery_glyph(None) == UNKNOWN_GLYPH
 
 
 @pytest.mark.parametrize("dark", [True, False])
