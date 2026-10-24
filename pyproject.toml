@@ -10,7 +10,14 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["hidapi==0.15.0", "pillow==13.0.0", "pystray==0.19.5"]
+dependencies = [
+    "hidapi==0.15.0",
+    "pillow==13.0.0",
+    "platformdirs==4.13.5",
+    "pystray==0.19.5",
+    "sv-ttk==2.6.1",
+    "tomli-w==1.2.0",
+]
 
 [project.scripts]
 battery-notifier = "battery_notifier.main:main"
@@ -44,6 +51,8 @@ max-complexity = 10
 # pyrefly
 [tool.pyrefly]
 preset = "default"
+# Windows is the main target: check Windows-only modules against the Windows stubs on every OS
+python-platform = "win32"
 # hidapi ships a compiled module without type stubs
 ignore-missing-imports = ["hid"]
 

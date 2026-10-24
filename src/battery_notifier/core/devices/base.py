@@ -2,7 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
-from battery_notifier.devices.hid_wrapper import DeviceInfo, HIDWrapper
+from battery_notifier.core.devices.hid_wrapper import DeviceInfo, HIDWrapper
 from battery_notifier.logs import logger
 
 

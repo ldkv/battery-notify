@@ -2,7 +2,7 @@
 
 import time
 
-from battery_notifier.devices.hid_wrapper import HIDWrapper
+from battery_notifier.core.devices.hid_wrapper import HIDWrapper
 from battery_notifier.logs import configure_logging, logger
 
 

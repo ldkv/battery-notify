@@ -40,22 +40,28 @@ jobs:
         run: task generate-executable
 
       # The windowed exe shows an error dialog instead of exiting on a crash,
-      # so wait for the first battery check to be logged rather than for the process to exit.
+      # so wait for each step to be logged rather than for the process to exit.
       - name: Smoke test executable
         shell: pwsh
         run: |
-          $workDir = New-Item -ItemType Directory -Path "$env:RUNNER_TEMP/smoke"
-          $logFile = Join-Path $workDir "battery_notifier.log"
-          Start-Process -FilePath (Resolve-Path "dist/battery_notifier.exe") -WorkingDirectory $workDir
-          $deadline = (Get-Date).AddSeconds(120)
-          $passed = $false
-          while (-not $passed -and (Get-Date) -lt $deadline) {
-            Start-Sleep -Seconds 2
-            $passed = (Test-Path $logFile) -and (Select-String -Path $logFile -Pattern "Next check in" -Quiet)
+          $exe = Resolve-Path "dist/battery_notifier.exe"
+          $logFile = Join-Path $env:LOCALAPPDATA "battery-notifier/Logs/battery_notifier.log"
+          function Wait-ForLog($pattern) {
+            $deadline = (Get-Date).AddSeconds(120)
+            while ((Get-Date) -lt $deadline) {
+              if ((Test-Path $logFile) -and (Select-String -Path $logFile -Pattern $pattern -Quiet)) { return $true }
+              Start-Sleep -Seconds 2
+            }
+            return $false
           }
+          Start-Process -FilePath $exe
+          $tray = Wait-ForLog "Next check in"
+          Start-Process -FilePath $exe -ArgumentList "settings"
+          $dialog = Wait-ForLog "Settings dialog ready"
           Stop-Process -Name "battery_notifier" -Force -ErrorAction SilentlyContinue
           if (Test-Path $logFile) { Get-Content $logFile }
-          if (-not $passed) { throw "Executable did not complete its first battery check" }
+          if (-not $tray) { throw "Executable did not complete its first battery check" }
+          if (-not $dialog) { throw "Settings dialog did not open" }
 
       - name: Rename executable with version
         id: rename

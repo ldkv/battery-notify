@@ -1,5 +1,5 @@
-from battery_notifier.devices import hid_wrapper
-from battery_notifier.devices.hid_wrapper import DeviceInfo, HIDWrapper
+from battery_notifier.core.devices import hid_wrapper
+from battery_notifier.core.devices.hid_wrapper import DeviceInfo, HIDWrapper
 
 RAW_DEVICES = [
     {"path": b"keyboard", "vendor_id": 0x3434, "product_id": 0xD030, "usage_page": 0x01, "usage": 0x06},

@@ -12,7 +12,11 @@ concurrency:
 
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -27,3 +31,13 @@ jobs:
 
       - name: Check code quality and run tests
         run: task check-all
+        env:
+          DIALOG_SCREENSHOTS: ${{ github.workspace }}/screenshots
+
+      - name: Upload settings dialog screenshots
+        if: ${{ !cancelled() && runner.os == 'Windows' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: settings-dialog-errors
+          path: screenshots
+          if-no-files-found: ignore

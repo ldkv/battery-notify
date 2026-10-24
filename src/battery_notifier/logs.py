@@ -1,6 +1,8 @@
 import logging
 import logging.config
 
+from battery_notifier.core.paths import log_dir
+
 GLOBAL_LOGGER_NAME = "battery_notifier"
 
 
@@ -23,7 +25,7 @@ def configure_logging():
             "file": {
                 "class": "logging.handlers.RotatingFileHandler",
                 "formatter": "simple",
-                "filename": f"{GLOBAL_LOGGER_NAME}.log",
+                "filename": log_dir() / f"{GLOBAL_LOGGER_NAME}.log",
                 "mode": "a",
                 "maxBytes": 1024 * 1024 * 10,  # 10 MB
                 "backupCount": 3,

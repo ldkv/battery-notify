@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from battery_notifier.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, DeviceInfo, HIDWrapper
+from battery_notifier.core.devices.base import DEFAULT_BATTERY_LEVEL, BaseDevice, DeviceInfo, HIDWrapper
 
 READ_TIMEOUT_MS = 1000
 

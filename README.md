@@ -27,7 +27,7 @@ Notify when battery is low
 
 3. Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
 
-The app runs in the system tray. Logs are written to `battery_notifier.log` in the working directory.
+The app runs in the system tray. Only one instance runs at a time.
 
 ### macOS / Linux: run from source
 
@@ -43,6 +43,14 @@ uv run battery-notifier
 ```
 
 To build a standalone executable into `dist/`, run `task generate-executable`.
+
+## Settings
+
+Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, which devices are checked, and whether the app runs at startup.
+
+Settings are saved to `config.toml` and logs to `Logs/battery_notifier.log`, both under `%LOCALAPPDATA%\battery-notifier` (**Open settings folder** in the tray menu). On macOS / Linux, they follow the OS conventions of [platformdirs](https://platformdirs.readthedocs.io/).
+
+The dialog can also be opened from a terminal with `battery-notifier settings`.
 
 ## Supported devices
 
