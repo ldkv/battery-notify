@@ -27,6 +27,8 @@ Notify when battery is low
 
 3. Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
 
+   The first launch of each version unpacks the app to `%LOCALAPPDATA%\battery-notifier\app\<version>`, later launches reuse it. Folders of previous versions are deleted automatically.
+
 The app runs in the system tray. Only one instance runs at a time.
 
 ### macOS / Linux: run from source
@@ -42,7 +44,7 @@ task dev-install
 uv run battery-notifier
 ```
 
-To build a standalone executable into `dist/`, run `task generate-executable`.
+To build the standalone executable into `dist/` on Windows, run `task generate-executable` (uses [Nuitka](https://nuitka.net/) and a C compiler, e.g. Visual Studio Build Tools).
 
 ## Settings
 

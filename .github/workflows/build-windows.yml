@@ -3,7 +3,7 @@ name: "Build Windows executable"
 on:
   pull_request:
     paths:
-      - "main.spec"
+      - "Taskfile.yml"
       - "pyproject.toml"
       - "uv.lock"
       - "src/**"
@@ -22,6 +22,9 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # Build with uv's standalone Python, as on a developer machine, not the runner's preinstalled one
+      UV_PYTHON_PREFERENCE: only-managed
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
