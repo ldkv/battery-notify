@@ -1,0 +1,121 @@
+name: "Rust: linter, tests and Windows build"
+
+on:
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
+
+      # The toolchain pinned in rust/rust-toolchain.toml is installed by rustup on first use
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Lint
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Run tests
+        run: cargo test --locked
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Build executable
+        run: cargo build --release --locked
+
+      # The windowed exe has no console, so wait for each step to be logged rather than for the process to exit.
+      - name: Smoke test executable
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path "target/release/battery-notifier.exe"
+          $logDir = Join-Path $env:LOCALAPPDATA "battery-notifier/Logs"
+          function Wait-ForLog($pattern) {
+            $deadline = (Get-Date).AddSeconds(120)
+            while ((Get-Date) -lt $deadline) {
+              $logs = Get-ChildItem -Path $logDir -Filter "battery_notifier_rust.*.log" -ErrorAction SilentlyContinue
+              if ($logs -and (Select-String -Path $logs.FullName -Pattern $pattern -Quiet)) { return $true }
+              Start-Sleep -Seconds 2
+            }
+            return $false
+          }
+          Start-Process -FilePath $exe
+          $tray = Wait-ForLog "Next check in"
+          Start-Process -FilePath $exe -ArgumentList "settings"
+          $dialog = Wait-ForLog "Settings dialog ready"
+          if ($dialog) {
+            Start-Sleep -Seconds 2
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+            [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+            $bitmap.Save("$env:RUNNER_TEMP/settings-dialog.png")
+          }
+          Stop-Process -Name "battery-notifier" -Force -ErrorAction SilentlyContinue
+          Get-ChildItem -Path $logDir -Filter "battery_notifier_rust.*.log" -ErrorAction SilentlyContinue | Get-Content
+          if (-not $tray) { throw "Executable did not complete its first battery check" }
+          if (-not $dialog) { throw "Settings dialog did not open" }
+
+      - name: Upload settings dialog screenshot
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust-settings-dialog-screenshot
+          path: ${{ runner.temp }}/settings-dialog.png
+          if-no-files-found: ignore
+
+      - name: Rename executable with version
+        id: rename
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          $name = "battery_notifier_rust-$version-windows-x64.exe"
+          Move-Item "target/release/battery-notifier.exe" "target/release/$name"
+          "name=$name" >> $env:GITHUB_OUTPUT
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust-windows-executable
+          path: rust/target/release/${{ steps.rename.outputs.name }}
+          if-no-files-found: error

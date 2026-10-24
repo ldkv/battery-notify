@@ -26,3 +26,6 @@ docs/_build/
 .venv*
 *.log
 screenshots/
+
+# Rust
+rust/target/

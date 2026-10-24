@@ -36,6 +36,10 @@ There is no display on Linux. The Windows CI jobs upload screenshots as artifact
 - `--include-package=winrt`: winrt submodules are imported from native code, invisible to Nuitka.
 - The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
 
+## Rust port
+
+`rust/` is a standalone Cargo package porting the app, same module layout, not released yet. It shares `config.toml`, the seen devices file and the single-instance mutex with the Python version. Checks: `task rust-check` and `task rust-test`; the `rust` workflow also builds and smoke tests the Windows exe. When changing a feature, change both versions until Python is retired.
+
 ## Commits
 
 Conventional commits (`feat:`, `fix:`, `perf:`, ...): release-please derives versions and release notes from them.
