@@ -76,6 +76,30 @@ tasks:
     deps: [dependencies-check, code-quality, test]
 
   generate-executable:
-    desc: Generate an executable for the project
+    desc: Generate a standalone executable into dist/, Windows only
+    vars:
+      VERSION:
+        sh: uv version --short
+      TCL_TK_OPTIONS:
+        sh: uv run python scripts/tcl_tk_libraries.py build/tcl_tk
     cmds:
-      - uv run pyinstaller main.spec
+      # The unpacked files are cached per version, so only the first launch of a version unpacks them.
+      # Windows 10+ ships the Universal C runtime, no need to bundle it.
+      # Keep the tempdir spec in sync with UNPACK_ROOT in src/battery_notifier/launcher.py
+      - >-
+        uv run python -m nuitka src/battery_notifier/main.py
+        --mode=onefile
+        --onefile-cache-mode=cached
+        --onefile-tempdir-spec="{CACHE_DIR}/battery-notifier/app/{VERSION}"
+        --windows-console-mode=disable
+        --enable-plugin=tk-inter {{.TCL_TK_OPTIONS}}
+        --include-distribution-metadata=battery_notifier
+        --include-package=winrt
+        --include-windows-runtime-dlls=no
+        --python-flag=no_docstrings
+        --product-name="Battery Notifier"
+        --product-version={{.VERSION}}
+        --file-version={{.VERSION}}
+        --output-dir=dist
+        --output-filename=battery_notifier.exe
+        --assume-yes-for-downloads
