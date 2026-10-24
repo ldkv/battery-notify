@@ -80,6 +80,14 @@ tasks:
     vars:
       VERSION:
         sh: uv version --short
+      # Nuitka only looks for Tcl/Tk in fixed folders, which uv's standalone Python does not use: ask Tcl itself
+      TCL_LIBRARY:
+        sh: uv run python -c "import tkinter; print(tkinter.Tcl().eval('info library'))"
+      TK_LIBRARY:
+        sh: uv run python -c "import os, tkinter; print(os.path.join(os.path.dirname(tkinter.Tcl().eval('info library')), f'tk{tkinter.TkVersion}'))"
+    env:
+      TCL_LIBRARY: "{{.TCL_LIBRARY}}"
+      TK_LIBRARY: "{{.TK_LIBRARY}}"
     cmds:
       # The unpacked files are cached per version, so only the first launch of a version unpacks them.
       # Windows 10+ ships the Universal C runtime, no need to bundle it.
