@@ -1,3 +1,5 @@
+import time
+from collections.abc import Callable
 from enum import Enum
 
 from battery_notifier.core.providers import BatteryReading
@@ -23,5 +25,29 @@ def battery_status(level: int | None, settings: Settings) -> BatteryStatus:
     return BatteryStatus.CRITICAL
 
 
-def should_notify(level: int | None, settings: Settings) -> bool:
-    return battery_status(level, settings) is not BatteryStatus.NORMAL
+class Notifier:
+    """
+    Decide which devices to notify about: when a device drops to the low level,
+    then again every `renotify_minutes` while it stays low.
+    """
+
+    def __init__(self, clock: Callable[[], float] = time.time):
+        self._clock = clock
+        self._notified_at: dict[str, float] = {}
+
+    def due(self, readings: list[BatteryReading], settings: Settings) -> list[BatteryReading]:
+        now = self._clock()
+        due = []
+        for reading in readings:
+            if reading.level is None:
+                continue  # did not answer this time: keep its state
+            if battery_status(reading.level, settings) is BatteryStatus.NORMAL:
+                self._notified_at.pop(reading.name, None)
+                continue
+            notified_at = self._notified_at.get(reading.name)
+            if notified_at is not None:
+                if not settings.renotify_minutes or now - notified_at < settings.renotify_minutes * 60:
+                    continue
+            self._notified_at[reading.name] = now
+            due.append(reading)
+        return due

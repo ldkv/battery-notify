@@ -15,6 +15,7 @@ RUN_VALUE = "BatteryNotifier"
 PERSONALIZE_KEY = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
 ERROR_ALREADY_EXISTS = 183
 PROCESS_SYSTEM_DPI_AWARE = 1
+ICON_FONTS = ["SegoeIcons.ttf", "segmdl2.ttf"]
 
 
 class WindowsPlatform(Platform):
@@ -59,11 +60,15 @@ class WindowsPlatform(Platform):
         return True
 
     def apps_use_dark_theme(self) -> bool:
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as key:
-                return winreg.QueryValueEx(key, "AppsUseLightTheme")[0] == 0
-        except OSError:
-            return False
+        return is_dark_theme("AppsUseLightTheme")
+
+    def taskbar_uses_dark_theme(self) -> bool:
+        return is_dark_theme("SystemUsesLightTheme")
+
+    def icon_font(self) -> Path | None:
+        fonts = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+        # Segoe Fluent Icons on Windows 11, Segoe MDL2 Assets on Windows 10
+        return next((path for name in ICON_FONTS if (path := fonts / name).exists()), None)
 
     def enable_high_dpi(self):
         try:
@@ -73,6 +78,14 @@ class WindowsPlatform(Platform):
 
     def open_folder(self, path: Path):
         os.startfile(path)
+
+
+def is_dark_theme(value_name: str) -> bool:
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, PERSONALIZE_KEY) as key:
+            return winreg.QueryValueEx(key, value_name)[0] == 0
+    except OSError:
+        return False
 
 
 def autostart_command() -> list[str]:

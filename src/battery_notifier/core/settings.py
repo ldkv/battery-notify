@@ -29,6 +29,7 @@ class Settings:
     check_interval_minutes: int = setting(10, "Check interval (minutes)", min=1, max=120)
     low_threshold: int = setting(20, "Low battery (%)", "Notify when a device drops to this level", min=1, max=99)
     critical_threshold: int = setting(10, "Critical battery (%)", min=1, max=99)
+    renotify_minutes: int = setting(60, "Repeat notification (minutes)", "0 to notify only once", min=0, max=720)
     disabled_devices: frozenset[str] = setting(frozenset(), "Devices", "Unchecked devices are ignored")
 
     def validate(self) -> dict[str, str]:

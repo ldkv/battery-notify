@@ -58,10 +58,26 @@ jobs:
           $tray = Wait-ForLog "Next check in"
           Start-Process -FilePath $exe -ArgumentList "settings"
           $dialog = Wait-ForLog "Settings dialog ready"
+          if ($dialog) {
+            Start-Sleep -Seconds 2
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
+            [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size)
+            $bitmap.Save("$env:RUNNER_TEMP/settings-dialog.png")
+          }
           Stop-Process -Name "battery_notifier" -Force -ErrorAction SilentlyContinue
           if (Test-Path $logFile) { Get-Content $logFile }
           if (-not $tray) { throw "Executable did not complete its first battery check" }
           if (-not $dialog) { throw "Settings dialog did not open" }
+
+      - name: Upload settings dialog screenshot
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: settings-dialog-screenshot
+          path: ${{ runner.temp }}/settings-dialog.png
+          if-no-files-found: ignore
 
       - name: Rename executable with version
         id: rename
