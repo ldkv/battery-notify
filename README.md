@@ -46,6 +46,8 @@ uv run battery-notifier
 
 To build the standalone executable into `dist/` on Windows, run `task generate-executable` (uses [Nuitka](https://nuitka.net/) and a C compiler, e.g. Visual Studio Build Tools).
 
+A Rust version is in progress in [rust/](rust/README.md).
+
 ## Settings
 
 Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, which devices are checked, and whether the app runs at startup.
