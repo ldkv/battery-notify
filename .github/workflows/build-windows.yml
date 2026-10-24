@@ -3,7 +3,7 @@ name: "Build Windows executable"
 on:
   pull_request:
     paths:
-      - "main.spec"
+      - "Taskfile.yml"
       - "pyproject.toml"
       - "uv.lock"
       - "src/**"

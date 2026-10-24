@@ -76,6 +76,24 @@ tasks:
     deps: [dependencies-check, code-quality, test]
 
   generate-executable:
-    desc: Generate an executable for the project
+    desc: Generate a standalone executable into dist/, Windows only
+    vars:
+      VERSION:
+        sh: uv version --short
     cmds:
-      - uv run pyinstaller main.spec
+      # The unpacked files are cached per version, so only the first launch of a version unpacks them.
+      # Keep the tempdir spec in sync with UNPACK_ROOT in src/battery_notifier/launcher.py
+      - >-
+        uv run python -m nuitka src/battery_notifier/main.py
+        --mode=onefile
+        --onefile-cache-mode=cached
+        --onefile-tempdir-spec="{CACHE_DIR}/battery-notifier/app/{VERSION}"
+        --windows-console-mode=disable
+        --enable-plugin=tk-inter
+        --include-distribution-metadata=battery_notifier
+        --product-name="Battery Notifier"
+        --product-version={{.VERSION}}
+        --file-version={{.VERSION}}
+        --output-dir=dist
+        --output-filename=battery_notifier.exe
+        --assume-yes-for-downloads

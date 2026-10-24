@@ -1,4 +1,3 @@
-import os
 import subprocess
 import threading
 
@@ -10,7 +9,7 @@ from battery_notifier.core.policy import BatteryStatus, Notifier, battery_status
 from battery_notifier.core.poller import Poller
 from battery_notifier.core.providers import BatteryReading, HIDProvider, OSProvider
 from battery_notifier.core.settings import Settings
-from battery_notifier.launcher import app_command, is_frozen
+from battery_notifier.launcher import app_command, app_environment, is_frozen, remove_old_versions
 from battery_notifier.logs import logger
 from battery_notifier.platforms.base import Platform
 from battery_notifier.ui.icon import icon_renderer
@@ -54,6 +53,7 @@ class TrayApp:
         # Keep "run at startup" pointing to this executable, e.g. after an update
         if is_frozen() and self.platform.is_autostart_enabled():
             self.platform.set_autostart(True)
+        remove_old_versions()
         threading.Thread(name="device_loop", target=self.device_loop, daemon=True).start()
         self.icon.run()
 
@@ -79,9 +79,7 @@ class TrayApp:
     def open_settings(self):
         if self.dialog and self.dialog.poll() is None:
             return
-        # Let a PyInstaller onefile child unpack itself instead of reusing the parent's files
-        env = os.environ | {"PYINSTALLER_RESET_ENVIRONMENT": "1"}
-        self.dialog = subprocess.Popen(app_command("settings"), env=env)
+        self.dialog = subprocess.Popen(app_command("settings"), env=app_environment())
         threading.Thread(name="settings_dialog", target=self.wait_for_dialog, args=[self.dialog], daemon=True).start()
 
     def wait_for_dialog(self, dialog: subprocess.Popen):
