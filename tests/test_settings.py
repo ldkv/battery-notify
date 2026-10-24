@@ -51,5 +51,6 @@ def test_unknown_keys_are_ignored(config_path):
 
 def test_validate():
     assert Settings().validate() == {}
-    assert Settings(low_threshold=60).validate() == {"low_threshold": "Must be between 5 and 50"}
+    assert Settings(low_threshold=60, critical_threshold=50).validate() == {}
+    assert Settings(low_threshold=100).validate() == {"low_threshold": "Must be between 1 and 99"}
     assert Settings(critical_threshold=20).validate() == {"critical_threshold": "Must be below the low battery level"}

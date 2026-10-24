@@ -13,7 +13,7 @@ import sv_ttk
 from battery_notifier.configs import image_path
 from battery_notifier.core.paths import log_dir
 from battery_notifier.core.poller import known_device_names
-from battery_notifier.core.settings import Settings
+from battery_notifier.core.settings import RANGE_ERROR, THRESHOLD_ERROR, Settings
 from battery_notifier.logs import logger
 from battery_notifier.platforms.base import Platform
 from battery_notifier.ui.form import FieldKind, FormField, form_fields
@@ -23,6 +23,7 @@ ROW_GAP = 12
 # Windows 11 "critical" text colors
 ERROR_COLORS = {"light": "#c42b1c", "dark": "#ff99a4"}
 CAPTION_COLORS = {"light": "#5d5d5d", "dark": "#a0a0a0"}
+NOT_A_NUMBER = "Must be a whole number"
 
 
 class SettingsDialog:
@@ -33,6 +34,7 @@ class SettingsDialog:
         self.numbers: dict[str, tk.StringVar] = {}
         self.checklists: dict[str, dict[str, tk.BooleanVar]] = {}
         self.errors: dict[str, ttk.Label] = {}
+        self.limits: dict[str, tuple[int | None, int | None]] = {}
 
         platform.enable_high_dpi()
         self.root = tk.Tk()
@@ -77,8 +79,7 @@ class SettingsDialog:
 
         self.root.bind("<Return>", lambda _: self.save())
         self.root.bind("<Escape>", lambda _: self.root.destroy())
-        self.refresh()
-        self.center()
+        self.fix_size()
 
     def add_number(self, frame: ttk.Frame, row: int, form_field: FormField):
         labels = ttk.Frame(frame)
@@ -96,6 +97,7 @@ class SettingsDialog:
         spinbox.grid(sticky="e")
         self.errors[form_field.name] = ttk.Label(widgets, style="Error.TLabel")
         self.errors[form_field.name].grid(sticky="e")
+        self.limits[form_field.name] = (form_field.min, form_field.max)
 
     def add_checklist(self, frame: ttk.Frame, row: int, form_field: FormField):
         group = ttk.LabelFrame(frame, text=form_field.label, padding=(PADDING // 2, 4))
@@ -117,7 +119,7 @@ class SettingsDialog:
             try:
                 values[name] = int(value.get())
             except ValueError:
-                errors[name] = "Must be a whole number"
+                errors[name] = NOT_A_NUMBER
         for name, checklist in self.checklists.items():
             values[name] = frozenset(device for device, enabled in checklist.items() if not enabled.get())
 
@@ -127,7 +129,8 @@ class SettingsDialog:
     def refresh(self):
         _, errors = self.edited_settings()
         for name, label in self.errors.items():
-            label.configure(text=errors.get(name, ""))
+            # A space keeps the line height, so that rows below do not move
+            label.configure(text=errors.get(name, " "))
         self.save_button.state(["disabled"] if errors else ["!disabled"])
 
     def save(self):
@@ -141,11 +144,18 @@ class SettingsDialog:
         self.saved = True
         self.root.destroy()
 
-    def center(self):
+    def fix_size(self):
+        """Size and center the window for the longest error messages, so that showing one never resizes it."""
+        for name, label in self.errors.items():
+            low, high = self.limits[name]
+            messages = [RANGE_ERROR.format(min=low, max=high), NOT_A_NUMBER, THRESHOLD_ERROR]
+            label.configure(text=max(messages, key=len))
         self.root.update_idletasks()
-        x = (self.root.winfo_screenwidth() - self.root.winfo_reqwidth()) // 2
-        y = (self.root.winfo_screenheight() - self.root.winfo_reqheight()) // 3
-        self.root.geometry(f"+{x}+{y}")
+        width, height = self.root.winfo_reqwidth(), self.root.winfo_reqheight()
+        self.refresh()
+        x = (self.root.winfo_screenwidth() - width) // 2
+        y = (self.root.winfo_screenheight() - height) // 3
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def run(self) -> bool:
         """Show the dialog until closed, return True if the settings were saved."""

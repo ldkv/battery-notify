@@ -15,6 +15,9 @@ import tomli_w
 from battery_notifier.core.paths import config_file
 from battery_notifier.logs import logger
 
+RANGE_ERROR = "Must be between {min} and {max}"
+THRESHOLD_ERROR = "Must be below the low battery level"
+
 
 def setting(default: Any, label: str, help_text: str = "", **limits: int) -> Any:
     """Declare a setting with its dialog label, help text and optional `min` / `max` limits."""
@@ -24,8 +27,8 @@ def setting(default: Any, label: str, help_text: str = "", **limits: int) -> Any
 @dataclass(frozen=True)
 class Settings:
     check_interval_minutes: int = setting(10, "Check interval (minutes)", min=1, max=120)
-    low_threshold: int = setting(20, "Low battery (%)", "Notify when a device drops to this level", min=5, max=50)
-    critical_threshold: int = setting(10, "Critical battery (%)", min=1, max=30)
+    low_threshold: int = setting(20, "Low battery (%)", "Notify when a device drops to this level", min=1, max=99)
+    critical_threshold: int = setting(10, "Critical battery (%)", min=1, max=99)
     disabled_devices: frozenset[str] = setting(frozenset(), "Devices", "Unchecked devices are ignored")
 
     def validate(self) -> dict[str, str]:
@@ -35,10 +38,10 @@ class Settings:
             value = getattr(self, setting_field.name)
             low, high = setting_field.metadata.get("min"), setting_field.metadata.get("max")
             if low is not None and high is not None and not low <= value <= high:
-                errors[setting_field.name] = f"Must be between {low} and {high}"
+                errors[setting_field.name] = RANGE_ERROR.format(min=low, max=high)
 
         if "critical_threshold" not in errors and self.critical_threshold >= self.low_threshold:
-            errors["critical_threshold"] = "Must be below the low battery level"
+            errors["critical_threshold"] = THRESHOLD_ERROR
         return errors
 
     def is_enabled(self, device_name: str) -> bool:
