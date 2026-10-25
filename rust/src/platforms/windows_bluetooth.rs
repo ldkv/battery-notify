@@ -84,10 +84,8 @@ mod winrt {
         let mut found = Vec::new();
         for device in devices {
             let properties = device.Properties()?;
-            if !properties.HasKey(&key)? {
-                continue;
-            }
-            let Ok(value) = properties.Lookup(&key)?.cast::<IPropertyValue>() else {
+            // A missing or null value is an error, the null one with code 0: the node has no such property
+            let Ok(value) = properties.Lookup(&key).and_then(|value| value.cast::<IPropertyValue>()) else {
                 continue;
             };
             if let Ok(value) = unbox(&value) {
@@ -128,6 +126,6 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn bluetooth_batteries_runs() {
-        assert!(winrt::find_bluetooth_batteries().is_ok());
+        winrt::find_bluetooth_batteries().unwrap();
     }
 }
