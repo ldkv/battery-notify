@@ -35,7 +35,8 @@ CI builds the Windows executable and the macOS app on each pull request: downloa
 
 The app lives in the menu bar, without a Dock icon. Bluetooth devices are not supported.
 
-- Notifications go through AppleScript, so they show as from Script Editor: macOS drops notifications from an unbundled binary, and the app bundle is only ad-hoc signed.
+- Move `Battery Notifier.app` to Applications or `~/Applications` before opening it: macOS refuses notifications to an app run from elsewhere, e.g. the build folder. The first launch asks to allow notifications.
+- Run from source (`cargo run`), there is no app bundle, so notifications go through AppleScript and show as from Script Editor.
 - Run at startup writes a LaunchAgent, `~/Library/LaunchAgents/io.github.ldkv.battery-notifier.plist`.
 - The app is not notarized. After downloading it, clear the quarantine flag before opening it: `xattr -dr com.apple.quarantine "Battery Notifier.app"`.
 
@@ -44,7 +45,7 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are not su
 Same modules as the Python version:
 
 - `core/`: devices, providers, poller, notification policy, settings. No GUI.
-- `platforms/`: the `Platform` trait, whose defaults are the unsupported-OS fallback, the Windows implementation (registry, mutex, WinRT Bluetooth) and the macOS one (AppleScript notifications, LaunchAgent).
+- `platforms/`: the `Platform` trait, whose defaults are the unsupported-OS fallback, the Windows implementation (registry, mutex, WinRT Bluetooth) and the macOS one (UserNotifications, LaunchAgent).
 - `ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, settings dialog (`egui`, in its own process).
 
 A new device is a `DeviceType` in `core/devices/`, added to `HID_DEVICES`.

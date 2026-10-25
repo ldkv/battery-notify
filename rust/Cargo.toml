@@ -46,5 +46,11 @@ windows = { version = "0.62.2", features = ["Devices_Enumeration", "Foundation_C
 windows-collections = "0.3.2"
 windows-registry = "0.100.0"
 
+[target."cfg(target_os = \"macos\")".dependencies]
+block2 = "0.6.2"
+objc2 = "0.6.5"
+objc2-foundation = { version = "0.3.2", features = ["NSBundle", "NSError", "NSString"] }
+objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger", "UNUserNotificationCenter"] }
+
 [dev-dependencies]
 tempfile = "3.27.0"
