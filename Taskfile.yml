@@ -97,6 +97,8 @@ tasks:
         --include-distribution-metadata=battery_notifier
         --include-package=winrt
         --include-package-data=winrt
+        --include-package-data=battery_notifier:*.png
+        --windows-icon-from-ico=src/battery_notifier/assets/app-icon.ico
         --include-windows-runtime-dlls=no
         --python-flag=no_docstrings
         --product-name="Battery Notifier"

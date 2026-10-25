@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "rust/**"
+      - "src/battery_notifier/assets/**"
       - ".github/workflows/rust-ci.yml"
   push:
     branches:
       - main
     paths:
       - "rust/**"
+      - "src/battery_notifier/assets/**"
       - ".github/workflows/rust-ci.yml"
 
 concurrency:

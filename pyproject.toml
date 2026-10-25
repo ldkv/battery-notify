@@ -63,8 +63,8 @@ max-complexity = 10
 preset = "default"
 # Windows is the main target: check Windows-only modules against the Windows stubs on every OS
 python-platform = "win32"
-# hidapi ships a compiled module without type stubs; winrt is only installed on Windows, PyObjC on macOS
-ignore-missing-imports = ["hid", "winrt.*", "PyObjCTools.*"]
+# hidapi ships a compiled module without type stubs; winrt is only installed on Windows, PyObjC on macOS; cairosvg is only used by scripts/render_app_icon.py, through uvx
+ignore-missing-imports = ["hid", "winrt.*", "PyObjCTools.*", "cairosvg"]
 
 # pytest
 [tool.pytest.ini_options]

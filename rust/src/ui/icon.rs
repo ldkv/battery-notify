@@ -1,7 +1,6 @@
 //! Tray icon: a battery glyph that follows the taskbar theme, amber when low and red when critical.
 //! Uses the battery glyphs of the Windows icon font, or draws a battery where the font is missing.
 
-use std::io;
 use std::path::PathBuf;
 
 use ab_glyph::{Font, FontVec, PxScale, ScaleFont, point};
@@ -11,6 +10,9 @@ use crate::core::policy::{BatteryStatus, battery_status};
 use crate::core::settings::Settings;
 
 pub const SIZE: u32 = 64;
+/// The app icon, a battery in a gear, rendered from its SVG by scripts/render_app_icon.py.
+/// The icon files live in the Python package, which must contain the PNG at runtime.
+pub const APP_ICON_PNG: &[u8] = include_bytes!("../../../src/battery_notifier/assets/app-icon.png");
 const LOW_COLOR: Rgb = Rgb(0xff, 0xb9, 0x00); // Windows amber
 const CRITICAL_COLOR: Rgb = Rgb(0xe8, 0x11, 0x23); // Windows red
 const ON_DARK_COLOR: Rgb = Rgb(0xff, 0xff, 0xff);
@@ -171,15 +173,6 @@ pub fn icon_renderer(
 }
 
 /// The icon for `level` with default settings, as a PNG file.
-pub fn icon_png(renderer: &dyn IconRenderer, level: Option<u8>) -> io::Result<Vec<u8>> {
-    let image = renderer.render(level, &Settings::default());
-    let mut pixmap = Pixmap::new(SIZE, SIZE).expect("non-zero icon size");
-    for (pixel, rgba) in pixmap.pixels_mut().iter_mut().zip(image.rgba.as_chunks::<4>().0) {
-        *pixel = tiny_skia::ColorU8::from_rgba(rgba[0], rgba[1], rgba[2], rgba[3]).premultiply();
-    }
-    pixmap.encode_png().map_err(io::Error::other)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,8 +218,8 @@ mod tests {
     }
 
     #[test]
-    fn png_encoding() {
-        let png = icon_png(icon_renderer(None, || false).as_ref(), Some(50)).unwrap();
-        assert!(png.starts_with(b"\x89PNG"));
+    fn app_icon() {
+        let icon = eframe::icon_data::from_png_bytes(APP_ICON_PNG).unwrap();
+        assert_eq!((icon.width, icon.height), (256, 256));
     }
 }

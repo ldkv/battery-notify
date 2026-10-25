@@ -19,7 +19,11 @@ Windows is the target: pyrefly checks the whole project with `python-platform = 
 - sv_ttk recolors every existing widget (`tk_setPalette`) once the theme change is processed, so the dialog applies the theme before creating any widget, then sets label colors and entry fonts per widget: custom ttk styles lose to sv_ttk.
 - The dialog never resizes or moves fields: `fix_size` sizes the window for the longest possible error message, shown on one status line. A new error message must be added there; `tests/test_settings_dialog.py` checks the layout stays put.
 
-## Tray icon
+## Icons
+
+The app icon (Windows executables, macOS app, settings dialog, Rust notifications) comes from `src/battery_notifier/assets/app-icon.svg`. After editing it, regenerate the committed `.png`, `.ico` and `.icns` beside it, used by both versions: `uvx --from cairosvg --with pillow python scripts/render_app_icon.py`.
+
+The tray icon is separate: a live battery glyph.
 
 Glyphs come from Segoe Fluent Icons / Segoe MDL2 Assets: `Battery0`–`Battery9` are U+E850–U+E859, but `Battery10` is U+E83F (U+E85A is a charging glyph).
 
