@@ -91,7 +91,7 @@ tasks:
         --mode=onefile
         --onefile-cache-mode=cached
         --onefile-tempdir-spec="{CACHE_DIR}/battery-notifier/app/{VERSION}"
-        --windows-console-mode=disable
+        --windows-console-mode=force
         --enable-plugin=tk-inter {{.TCL_TK_OPTIONS}}
         --include-distribution-metadata=battery_notifier
         --include-package=winrt

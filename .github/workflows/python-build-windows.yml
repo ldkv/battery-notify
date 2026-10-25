@@ -43,6 +43,22 @@ jobs:
 
       # The windowed exe shows an error dialog instead of exiting on a crash,
       # so wait for each step to be logged rather than for the process to exit.
+      - name: Debug from source
+        shell: pwsh
+        continue-on-error: true
+        run: uv run python -c "from battery_notifier.platforms.windows_bluetooth import bluetooth_batteries; print(bluetooth_batteries())"
+
+      - name: Debug executable
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $p = Start-Process -FilePath (Resolve-Path "dist/battery_notifier.exe") -NoNewWindow -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP/out.txt" -RedirectStandardError "$env:RUNNER_TEMP/err.txt"
+          if (-not $p.WaitForExit(60000)) { "still running after 60s" }
+          "exit code: $($p.ExitCode)"
+          Get-Content "$env:RUNNER_TEMP/out.txt", "$env:RUNNER_TEMP/err.txt"
+          Get-ChildItem -Recurse (Join-Path $env:LOCALAPPDATA "battery-notifier") | Select-Object FullName
+          Stop-Process -Name "battery_notifier" -Force -ErrorAction SilentlyContinue
+
       - name: Smoke test executable
         shell: pwsh
         run: |
