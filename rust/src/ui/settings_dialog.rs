@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use eframe::egui::{
-    self, Button, CentralPanel, Color32, IconData, Key, RichText, Stroke, StrokeKind, TextEdit, Theme, ViewportBuilder,
+    self, Button, CentralPanel, Color32, Key, RichText, Stroke, StrokeKind, TextEdit, Theme, ViewportBuilder,
     ViewportCommand,
 };
 
@@ -13,7 +13,7 @@ use crate::core::paths::{log_dir, seen_devices_file};
 use crate::core::poller::known_device_names;
 use crate::core::settings::{Errors, FIELDS, Field, FieldKind, Settings};
 use crate::platforms::Platform;
-use crate::ui::icon::{SIZE, icon_renderer};
+use crate::ui::icon::APP_ICON_PNG;
 
 const TITLE: &str = "Battery Notifier settings";
 const WIDTH: f32 = 460.0;
@@ -200,19 +200,16 @@ impl eframe::App for SettingsDialog {
 /// Show the dialog until closed, return true if the settings were saved.
 /// With `close_with_tray`, also close without saving once stdin closes, i.e. when the tray app quits.
 pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: bool) -> bool {
-    let theme_platform = platform.clone();
-    let icon =
-        icon_renderer(platform.icon_font(), move || theme_platform.apps_use_dark_theme()).render(None, &settings);
-    let options = eframe::NativeOptions {
-        viewport: ViewportBuilder::default()
-            .with_title(TITLE)
-            .with_inner_size([WIDTH, 400.0])
-            .with_resizable(false)
-            .with_maximize_button(false)
-            .with_icon(IconData { rgba: icon.rgba, width: SIZE, height: SIZE }),
-        centered: true,
-        ..Default::default()
-    };
+    let mut viewport = ViewportBuilder::default()
+        .with_title(TITLE)
+        .with_inner_size([WIDTH, 400.0])
+        .with_resizable(false)
+        .with_maximize_button(false);
+    match eframe::icon_data::from_png_bytes(APP_ICON_PNG) {
+        Ok(icon) => viewport = viewport.with_icon(icon),
+        Err(e) => tracing::warn!("Invalid app icon: {e}"),
+    }
+    let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
     let device_names = known_device_names(&settings, &seen_devices_file());

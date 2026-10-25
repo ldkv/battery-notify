@@ -6,7 +6,7 @@ import pytest
 
 from battery_notifier.core.settings import Settings
 from battery_notifier.platforms.base import Platform
-from battery_notifier.ui.settings_dialog import SettingsDialog
+from battery_notifier.ui.settings_dialog import APP_ICON, SettingsDialog
 
 
 @pytest.fixture
@@ -68,3 +68,7 @@ def save_screenshot(dialog: SettingsDialog, name: str):
     )
     Path(folder).mkdir(exist_ok=True)
     ImageGrab.grab(box).save(Path(folder) / name)
+
+
+def test_app_icon_is_in_the_package():
+    assert APP_ICON.is_file()

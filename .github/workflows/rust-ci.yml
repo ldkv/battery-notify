@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - "rust/**"
+      - "assets/icon/**"
       - ".github/workflows/rust-ci.yml"
   push:
     branches:
       - main
     paths:
       - "rust/**"
+      - "assets/icon/**"
       - ".github/workflows/rust-ci.yml"
 
 concurrency:

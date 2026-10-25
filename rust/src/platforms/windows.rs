@@ -11,7 +11,7 @@ use windows_registry::CURRENT_USER;
 
 use super::{APP_TITLE, Platform};
 use crate::core::paths::state_dir;
-use crate::ui::icon::{icon_png, icon_renderer};
+use crate::ui::icon::APP_ICON_PNG;
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 const RUN_VALUE: &str = "BatteryNotifier";
@@ -72,7 +72,7 @@ impl Platform for WindowsPlatform {
     }
 
     fn register_notifications(&self) {
-        if let Err(e) = register_app_user_model_id(self) {
+        if let Err(e) = register_app_user_model_id() {
             tracing::warn!("Could not register notifications: {e}");
         }
     }
@@ -111,10 +111,9 @@ fn autostart_command() -> io::Result<String> {
 }
 
 /// Name and icon shown on toast notifications.
-fn register_app_user_model_id(platform: &WindowsPlatform) -> io::Result<()> {
+fn register_app_user_model_id() -> io::Result<()> {
     let icon_path = state_dir().join("notification_icon.png");
-    let renderer = icon_renderer(platform.icon_font(), || false);
-    fs::write(&icon_path, icon_png(renderer.as_ref(), Some(20))?)?;
+    fs::write(&icon_path, APP_ICON_PNG)?;
     let key = CURRENT_USER.create(APP_USER_MODEL_KEY)?;
     key.set_string("DisplayName", APP_TITLE)?;
     key.set_string("IconUri", icon_path.display().to_string())?;
