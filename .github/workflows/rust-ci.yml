@@ -118,7 +118,9 @@ jobs:
           path: ${{ runner.temp }}/settings-dialog.png
           if-no-files-found: ignore
 
+      # Also when the smoke test fails, to download and debug the build
       - name: Rename executable with version
+        if: ${{ !cancelled() }}
         id: rename
         shell: pwsh
         run: |
@@ -128,6 +130,7 @@ jobs:
           "name=$name" >> $env:GITHUB_OUTPUT
 
       - name: Upload executable
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: rust-windows-executable
