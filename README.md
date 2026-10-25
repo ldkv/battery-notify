@@ -33,7 +33,7 @@ The app runs in the system tray. Only one instance runs at a time.
 
 ### macOS / Linux: run from source
 
-There is no official release for macOS or Linux. These platforms are untested, and Bluetooth devices are only supported on Windows.
+There is no official release for macOS or Linux. The app runs from source on macOS, Linux is untested, and Bluetooth devices are only supported on Windows.
 
 Install [uv](https://docs.astral.sh/uv/) and [Task](https://taskfile.dev/), then:
 

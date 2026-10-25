@@ -63,8 +63,8 @@ max-complexity = 10
 preset = "default"
 # Windows is the main target: check Windows-only modules against the Windows stubs on every OS
 python-platform = "win32"
-# hidapi ships a compiled module without type stubs; winrt is only installed on Windows
-ignore-missing-imports = ["hid", "winrt.*"]
+# hidapi ships a compiled module without type stubs; winrt is only installed on Windows, PyObjC on macOS
+ignore-missing-imports = ["hid", "winrt.*", "PyObjCTools.*"]
 
 # pytest
 [tool.pytest.ini_options]

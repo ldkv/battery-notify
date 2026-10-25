@@ -10,4 +10,8 @@ def current_platform() -> Platform:
         from battery_notifier.platforms.windows import WindowsPlatform  # noqa: PLC0415
 
         return WindowsPlatform()
+    if sys.platform == "darwin":
+        from battery_notifier.platforms.macos import MacOSPlatform  # noqa: PLC0415
+
+        return MacOSPlatform()
     return Platform()
