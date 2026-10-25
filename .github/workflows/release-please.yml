@@ -65,7 +65,7 @@ jobs:
   build-rust:
     needs: release-please
     if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
-    uses: ./.github/workflows/rust-ci.yml
+    uses: ./.github/workflows/rust-build.yml
     with:
       ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
 
