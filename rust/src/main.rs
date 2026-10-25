@@ -10,12 +10,13 @@ use battery_notifier::logs::configure_logging;
 use battery_notifier::platforms::{Platform, current_platform};
 use battery_notifier::ui::{settings_dialog, tray};
 
-const USAGE: &str = "Usage: battery-notifier [settings | --once]
+const USAGE: &str = "Usage: battery-notifier [settings [--close-with-tray] | --once]
 
 Notify when battery is low.
 
 Commands:
   settings  open the settings dialog
+            --close-with-tray: close when stdin closes, the tray app holds the other end
   --once    print the battery levels once and exit";
 
 fn main() -> ExitCode {
@@ -35,7 +36,7 @@ fn main() -> ExitCode {
             }
             tray::run(platform)
         }
-        Some("settings") => run_settings_dialog(platform),
+        Some("settings") => run_settings_dialog(platform, std::env::args().any(|arg| arg == "--close-with-tray")),
         Some("--once") => {
             print_battery_levels(&*platform);
             ExitCode::SUCCESS
@@ -52,11 +53,15 @@ fn main() -> ExitCode {
 }
 
 /// Exit code 0 when the settings were saved.
-fn run_settings_dialog(platform: std::sync::Arc<dyn Platform>) -> ExitCode {
+fn run_settings_dialog(platform: std::sync::Arc<dyn Platform>, close_with_tray: bool) -> ExitCode {
     if !platform.acquire_single_instance("BatteryNotifier.Settings") {
         return ExitCode::FAILURE;
     }
-    if settings_dialog::run(platform, Settings::load()) { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    if settings_dialog::run(platform, Settings::load(), close_with_tray) {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 fn print_battery_levels(platform: &dyn Platform) {

@@ -92,9 +92,21 @@ jobs:
             $bitmap.Save("$env:RUNNER_TEMP/settings-dialog.png")
           }
           Stop-Process -Name "battery-notifier" -Force -ErrorAction SilentlyContinue
+          # The tray starts the dialog with a pipe on its stdin: closing that pipe must close the dialog
+          $start = [System.Diagnostics.ProcessStartInfo]::new($exe, "settings --close-with-tray")
+          $start.UseShellExecute = $false
+          $start.RedirectStandardInput = $true
+          $watched = [System.Diagnostics.Process]::Start($start)
+          Start-Sleep -Seconds 10
+          $stayedOpen = -not $watched.HasExited
+          $watched.StandardInput.Close()
+          $closedWithTray = $watched.WaitForExit(30000)
+          Stop-Process -Name "battery-notifier" -Force -ErrorAction SilentlyContinue
           Get-ChildItem -Path $logDir -Filter "battery_notifier_rust.*.log" -ErrorAction SilentlyContinue | Get-Content
           if (-not $tray) { throw "Executable did not complete its first battery check" }
           if (-not $dialog) { throw "Settings dialog did not open" }
+          if (-not $stayedOpen) { throw "Settings dialog closed while the tray pipe was open" }
+          if (-not $closedWithTray) { throw "Settings dialog did not close with the tray" }
 
       - name: Upload settings dialog screenshot
         if: ${{ !cancelled() }}
