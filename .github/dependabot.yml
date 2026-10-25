@@ -16,6 +16,10 @@ updates:
       interval: "daily"
     cooldown:
       default-days: 3
+    ignore:
+      # Must match the version `windows` depends on (see rust/Cargo.toml).
+      - dependency-name: "windows-collections"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

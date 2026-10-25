@@ -56,7 +56,7 @@ jobs:
   build:
     needs: release-please
     if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
-    uses: ./.github/workflows/build-windows.yml
+    uses: ./.github/workflows/python-build-windows.yml
     with:
       ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
 
