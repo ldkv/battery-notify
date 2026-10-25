@@ -79,12 +79,26 @@ jobs:
             }
             return $false
           }
-          Start-Process -FilePath $exe
+          # Private working set is the Memory column of Task Manager: RAM used by the process alone
+          function Get-MemoryRow($name, $process) {
+            $perf = Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -Filter "IDProcess=$($process.Id)"
+            $process.Refresh()
+            "| $name | {0:N1} | {1:N1} | {2:N1} |" -f ($perf.WorkingSetPrivate / 1MB), ($process.WorkingSet64 / 1MB), ($process.PrivateMemorySize64 / 1MB)
+          }
+          $trayProcess = Start-Process -FilePath $exe -PassThru
           $tray = Wait-ForLog "Next check in"
-          Start-Process -FilePath $exe -ArgumentList "settings"
+          $dialogProcess = Start-Process -FilePath $exe -ArgumentList "settings" -PassThru
           $dialog = Wait-ForLog "Settings dialog ready"
           if ($dialog) {
             Start-Sleep -Seconds 2
+            $memory = @(
+              "| Process | Private working set (MB) | Working set (MB) | Private bytes (MB) |",
+              "|---|---|---|---|",
+              (Get-MemoryRow "Tray" $trayProcess),
+              (Get-MemoryRow "Settings dialog" $dialogProcess)
+            )
+            $memory
+            $memory >> $env:GITHUB_STEP_SUMMARY
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
             $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
