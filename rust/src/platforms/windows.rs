@@ -95,6 +95,13 @@ impl Platform for WindowsPlatform {
         let _ = unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
     }
 
+    fn open_url(&self, url: &str) {
+        // Explorer opens a URL in the default browser
+        if let Err(e) = Command::new("explorer").arg(url).spawn() {
+            tracing::warn!("Could not open {url}: {e}");
+        }
+    }
+
     fn open_folder(&self, path: &Path) {
         if let Err(e) = Command::new("explorer").arg(path).spawn() {
             tracing::warn!("Could not open {}: {e}", path.display());

@@ -18,17 +18,32 @@ use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider, OsPro
 use crate::core::settings::Settings;
 use crate::platforms::Platform;
 use crate::ui::icon::{IconImage, SIZE, icon_renderer};
+use crate::updater::{self, AvailableUpdate, RELEASES_PAGE};
 
 const NO_DEVICE_TEXT: &str = "No device found yet";
 const REFRESH_ID: &str = "refresh";
 const SETTINGS_ID: &str = "settings";
 const OPEN_FOLDER_ID: &str = "open_folder";
 const QUIT_ID: &str = "quit";
+const UPDATE_ID: &str = "update";
+const UPDATE_CHECK_INTERVAL: Duration = Duration::from_hours(24);
 
 enum UserEvent {
     Readings(Vec<BatteryReading>, IconImage),
     Menu(MenuEvent),
     Tray(TrayIconEvent),
+    UpdateAvailable(AvailableUpdate),
+    /// The new version is in place: start it with this command, then exit.
+    UpdateInstalled(Command),
+    UpdateFailed(String),
+}
+
+/// What the tray menu shows besides its fixed items.
+#[derive(Default)]
+struct MenuState {
+    readings: Vec<BatteryReading>,
+    update: Option<AvailableUpdate>,
+    updating: bool,
 }
 
 type SharedSettings = Arc<Mutex<Settings>>;
@@ -70,6 +85,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
     let (wake, wake_receiver) = mpsc::channel();
     let mut wake_receiver = Some(wake_receiver);
     let mut tray: Option<TrayIcon> = None;
+    let mut menu = MenuState::default();
     let dialog_open = Arc::new(AtomicBool::new(false));
 
     event_loop.run(move |event, _, control_flow| {
@@ -81,19 +97,34 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                 let renderer = icon_renderer(platform.icon_font(), move || theme_platform.taskbar_uses_dark_theme());
                 tray = build_tray(renderer.render(None, &current(&settings)));
                 if let Some(wake_receiver) = wake_receiver.take() {
-                    let (platform, settings, proxy) = (platform.clone(), settings.clone(), proxy.clone());
-                    let spawned = thread::Builder::new()
-                        .name("device_loop".to_string())
-                        .spawn(move || device_loop(&platform, &settings, &wake_receiver, &proxy));
-                    if let Err(e) = spawned {
-                        tracing::error!("Could not start the device loop: {e}");
-                    }
+                    start_background_loops(&platform, &settings, wake_receiver, &proxy);
                 }
             }
             Event::UserEvent(UserEvent::Readings(readings, icon)) => {
+                menu.readings = readings;
                 if let Some(tray) = &tray {
-                    update_tray(tray, &readings, icon);
+                    update_tray(tray, &menu, icon);
                 }
+            }
+            Event::UserEvent(UserEvent::UpdateAvailable(update)) => {
+                menu.update = Some(update);
+                refresh_menu(tray.as_ref(), &menu);
+            }
+            Event::UserEvent(UserEvent::UpdateInstalled(mut command)) => match command.spawn() {
+                Ok(_) => {
+                    tracing::info!("Updated, starting the new version");
+                    *control_flow = ControlFlow::Exit;
+                }
+                Err(e) => {
+                    menu.updating = false;
+                    refresh_menu(tray.as_ref(), &menu);
+                    update_failed(platform.as_ref(), &format!("could not start the new version: {e}"));
+                }
+            },
+            Event::UserEvent(UserEvent::UpdateFailed(error)) => {
+                menu.updating = false;
+                refresh_menu(tray.as_ref(), &menu);
+                update_failed(platform.as_ref(), &error);
             }
             Event::UserEvent(UserEvent::Tray(TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -108,6 +139,13 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                 }
                 SETTINGS_ID => open_settings(&dialog_open, &settings, &wake),
                 OPEN_FOLDER_ID => platform.open_folder(&config_dir()),
+                UPDATE_ID => {
+                    if let Some(update) = menu.update.clone().filter(|_| !menu.updating) {
+                        menu.updating = true;
+                        refresh_menu(tray.as_ref(), &menu);
+                        install_update(update, proxy.clone());
+                    }
+                }
                 QUIT_ID => *control_flow = ControlFlow::Exit,
                 _ => {}
             },
@@ -123,7 +161,7 @@ fn tray_icon(image: IconImage) -> Option<Icon> {
 fn build_tray(icon: IconImage) -> Option<TrayIcon> {
     let mut builder = TrayIconBuilder::new()
         .with_tooltip(NO_DEVICE_TEXT)
-        .with_menu(Box::new(build_menu(&[])))
+        .with_menu(Box::new(build_menu(&MenuState::default())))
         .with_menu_on_left_click(false);
     if let Some(icon) = tray_icon(icon) {
         builder = builder.with_icon(icon);
@@ -131,13 +169,20 @@ fn build_tray(icon: IconImage) -> Option<TrayIcon> {
     builder.build().inspect_err(|e| tracing::error!("Could not create the tray icon: {e}")).ok()
 }
 
-fn build_menu(readings: &[BatteryReading]) -> Menu {
+fn build_menu(state: &MenuState) -> Menu {
     let menu = Menu::new();
     let mut items: Vec<MenuItem> =
-        readings.iter().map(|reading| MenuItem::new(reading.to_string(), false, None)).collect();
-    if readings.is_empty() {
+        state.readings.iter().map(|reading| MenuItem::new(reading.to_string(), false, None)).collect();
+    if state.readings.is_empty() {
         items.push(MenuItem::new(NO_DEVICE_TEXT, false, None));
     }
+    let update = state.update.as_ref().map(|update| {
+        if state.updating {
+            MenuItem::new(format!("Updating to {}…", update.version), false, None)
+        } else {
+            MenuItem::with_id(UPDATE_ID, format!("Update to {}", update.version), true, None)
+        }
+    });
     let appended = items
         .iter()
         .try_for_each(|item| menu.append(item))
@@ -146,6 +191,7 @@ fn build_menu(readings: &[BatteryReading]) -> Menu {
         .and_then(|()| menu.append(&MenuItem::with_id(SETTINGS_ID, "Settings…", true, None)))
         .and_then(|()| menu.append(&MenuItem::with_id(OPEN_FOLDER_ID, "Open settings folder", true, None)))
         .and_then(|()| menu.append(&PredefinedMenuItem::separator()))
+        .and_then(|()| update.as_ref().map_or(Ok(()), |item| menu.append(item)))
         .and_then(|()| menu.append(&MenuItem::new(format!("Battery Notifier v{VERSION}"), false, None)))
         .and_then(|()| menu.append(&MenuItem::with_id(QUIT_ID, "Quit", true, None)));
     if let Err(e) = appended {
@@ -155,12 +201,18 @@ fn build_menu(readings: &[BatteryReading]) -> Menu {
 }
 
 /// Update tray icon, tooltip and menu from the devices' battery levels.
-fn update_tray(tray: &TrayIcon, readings: &[BatteryReading], icon: IconImage) {
-    let tooltip = tooltip(readings);
+fn update_tray(tray: &TrayIcon, state: &MenuState, icon: IconImage) {
+    let tooltip = tooltip(&state.readings);
     if let Err(e) = tray.set_tooltip(Some(tooltip)).and_then(|()| tray.set_icon(tray_icon(icon))) {
         tracing::error!("Could not update the tray icon: {e}");
     }
-    tray.set_menu(Some(Box::new(build_menu(readings))));
+    refresh_menu(Some(tray), state);
+}
+
+fn refresh_menu(tray: Option<&TrayIcon>, state: &MenuState) {
+    if let Some(tray) = tray {
+        tray.set_menu(Some(Box::new(build_menu(state))));
+    }
 }
 
 fn tooltip(readings: &[BatteryReading]) -> String {
@@ -241,4 +293,76 @@ fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake:
             let _ = wake.send(());
         }
     });
+}
+
+/// Separate thread to look for a newer release, now and then every day.
+fn update_loop(platform: &Arc<dyn Platform>, proxy: &EventLoopProxy<UserEvent>) {
+    let mut notified: Option<String> = None;
+    loop {
+        match updater::check() {
+            Ok(Some(update)) => {
+                if notified.as_ref() != Some(&update.version) {
+                    tracing::info!("Update available: {}", update.version);
+                    platform.show_notification(
+                        "Update available",
+                        &format!(
+                            "Battery Notifier {} is available: choose Update in the menu to install it.",
+                            update.version
+                        ),
+                    );
+                    notified = Some(update.version.clone());
+                }
+                if proxy.send_event(UserEvent::UpdateAvailable(update)).is_err() {
+                    return; // the event loop has exited
+                }
+            }
+            Ok(None) => tracing::info!("No update available"),
+            Err(e) => tracing::warn!("Could not check for updates: {e}"),
+        }
+        thread::sleep(UPDATE_CHECK_INTERVAL);
+    }
+}
+
+fn install_update(update: AvailableUpdate, proxy: EventLoopProxy<UserEvent>) {
+    let spawned = thread::Builder::new().name("update_install".to_string()).spawn(move || {
+        tracing::info!("Installing update {}", update.version);
+        let event = match updater::install(&update) {
+            Ok(command) => UserEvent::UpdateInstalled(command),
+            Err(e) => UserEvent::UpdateFailed(e.to_string()),
+        };
+        let _ = proxy.send_event(event);
+    });
+    if let Err(e) = spawned {
+        tracing::error!("Could not start the update: {e}");
+    }
+}
+
+fn update_failed(platform: &dyn Platform, error: &str) {
+    tracing::error!("Update failed: {error}");
+    platform.show_notification("Update failed", &format!("{error}. Opening the release page to download it."));
+    platform.open_url(RELEASES_PAGE);
+}
+
+/// Battery checks, and update checks except in development builds, which must not replace the built binary.
+fn start_background_loops(
+    platform: &Arc<dyn Platform>,
+    settings: &SharedSettings,
+    wake_receiver: Receiver<()>,
+    proxy: &EventLoopProxy<UserEvent>,
+) {
+    let (device_platform, settings, device_proxy) = (platform.clone(), settings.clone(), proxy.clone());
+    let spawned = thread::Builder::new()
+        .name("device_loop".to_string())
+        .spawn(move || device_loop(&device_platform, &settings, &wake_receiver, &device_proxy));
+    if let Err(e) = spawned {
+        tracing::error!("Could not start the device loop: {e}");
+    }
+    if cfg!(not(debug_assertions)) {
+        let (platform, proxy) = (platform.clone(), proxy.clone());
+        let spawned =
+            thread::Builder::new().name("update_check".to_string()).spawn(move || update_loop(&platform, &proxy));
+        if let Err(e) = spawned {
+            tracing::error!("Could not start the update checks: {e}");
+        }
+    }
 }

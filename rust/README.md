@@ -40,6 +40,20 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are not su
 - Run at startup writes a LaunchAgent, `~/Library/LaunchAgents/io.github.ldkv.battery-notifier.plist`.
 - The app is not notarized: see [Install on macOS](../README.md#macos) to open it after downloading.
 
+## Updates
+
+The app updates itself from GitHub releases (`src/updater.rs`): it finds the release zip for its platform, checks its signature against `updater-key.pub`, then replaces the executable on Windows (`self-replace`) or the whole `.app` bundle on macOS, and restarts with `--after-update`, which waits for the previous version to exit. Development builds do not check for updates.
+
+The release workflow signs each Rust zip with [zipsign](https://github.com/Kijewski/zipsign), for its file name, using the `ZIPSIGN_PRIVATE_KEY` repository secret, then verifies it against `updater-key.pub`. To create or replace the key pair:
+
+```sh
+cargo install zipsign --locked
+zipsign gen-key priv.key rust/updater-key.pub
+base64 -w0 priv.key   # save as the ZIPSIGN_PRIVATE_KEY repository secret, then delete priv.key
+```
+
+Apps only accept updates signed by the key they were built with: after replacing the key, released apps cannot update to the next version and need a manual download.
+
 ## Layout
 
 Same modules as the Python version:
