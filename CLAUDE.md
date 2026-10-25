@@ -33,7 +33,7 @@ Check layout locally under Xvfb: `DIALOG_SCREENSHOTS=shots xvfb-run -a uv run py
 
 - Unpacked once per version to `%LOCALAPPDATA%\battery-notifier\app\<version>`; `UNPACK_ROOT` in `launcher.py` must match `--onefile-tempdir-spec`.
 - `scripts/tcl_tk_libraries.py` extracts the Tcl/Tk libraries that uv's standalone Python zips inside its DLLs, where Nuitka cannot find them. The build workflow uses uv's Python (`UV_PYTHON_PREFERENCE=only-managed`) to match developer machines.
-- `--include-package=winrt`: winrt submodules are imported from native code, invisible to Nuitka.
+- `--include-package=winrt`: winrt submodules are imported from native code, invisible to Nuitka. `--include-package-data=winrt`: since winrt 4, each projection reads its `_table.pywinrt` at import; without it the exe dies at startup, before logging anything.
 - The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
 
 ## Rust port
