@@ -4,5 +4,6 @@ pub mod core;
 pub mod logs;
 pub mod platforms;
 pub mod ui;
+pub mod updater;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

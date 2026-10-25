@@ -66,6 +66,13 @@ pub trait Platform: Send + Sync {
     /// Show a console when started from one, for command line output.
     fn attach_console(&self) {}
 
+    fn open_url(&self, url: &str) {
+        let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
+        if let Err(e) = std::process::Command::new(opener).arg(url).spawn() {
+            tracing::warn!("Could not open {url}: {e}");
+        }
+    }
+
     fn open_folder(&self, path: &Path) {
         let opener = if cfg!(target_os = "macos") { "open" } else { "xdg-open" };
         if let Err(e) = std::process::Command::new(opener).arg(path).spawn() {

@@ -99,6 +99,29 @@ jobs:
           name: rust-macos-app
           path: dist
 
+      # The app's updater only installs a zip signed for its file name: see rust/README.md
+      - name: Checkout public signing key
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          sparse-checkout: rust/updater-key.pub
+          sparse-checkout-cone-mode: false
+          path: repo
+
+      - name: Sign the Rust zips
+        working-directory: dist
+        env:
+          ZIPSIGN_PRIVATE_KEY: ${{ secrets.ZIPSIGN_PRIVATE_KEY }}
+        run: |
+          cargo install zipsign --version 0.2.2 --locked
+          key="$RUNNER_TEMP/zipsign.key"
+          echo "$ZIPSIGN_PRIVATE_KEY" | base64 -d > "$key"
+          for zip in battery_notifier_rust-*.zip; do
+            zipsign sign zip "$zip" "$key"
+            zipsign verify zip "$zip" ../repo/rust/updater-key.pub
+          done
+          rm "$key"
+
       - name: Generate checksums
         working-directory: dist
         run: sha256sum *.exe *.zip > SHA256SUMS.txt

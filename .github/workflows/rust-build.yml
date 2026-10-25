@@ -115,14 +115,15 @@ jobs:
           if-no-files-found: ignore
 
       # Also when the smoke test fails, to download and debug the build
-      - name: Rename executable with version
+      # A zip, which releases sign for the app's updater: it contains battery-notifier.exe
+      - name: Zip executable with version
         if: ${{ !cancelled() }}
-        id: rename
+        id: zip
         shell: pwsh
         run: |
           $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
-          $name = "battery_notifier_rust-$version-windows-x64.exe"
-          Move-Item "target/$env:CARGO_PROFILE/battery-notifier.exe" "target/$env:CARGO_PROFILE/$name"
+          $name = "battery_notifier_rust-$version-windows-x64.zip"
+          Compress-Archive -Path "target/$env:CARGO_PROFILE/battery-notifier.exe" -DestinationPath "target/$env:CARGO_PROFILE/$name"
           "name=$name" >> $env:GITHUB_OUTPUT
 
       - name: Upload executable
@@ -130,7 +131,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: rust-windows-executable
-          path: rust/target/${{ env.CARGO_PROFILE }}/${{ steps.rename.outputs.name }}
+          path: rust/target/${{ env.CARGO_PROFILE }}/${{ steps.zip.outputs.name }}
           if-no-files-found: error
 
   # Pull requests compile and test on macOS in the check job: build the app on main only

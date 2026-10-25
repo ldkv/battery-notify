@@ -14,12 +14,12 @@ Each [release](https://github.com/ldkv/battery-notify/releases/latest) contains:
 
 | File                                              | For                                        |
 | ------------------------------------------------- | ------------------------------------------ |
-| `battery_notifier_rust-<version>-windows-x64.exe` | Windows, Rust version                      |
+| `battery_notifier_rust-<version>-windows-x64.zip` | Windows, Rust version                      |
 | `battery_notifier-<version>-windows-x64.exe`      | Windows, Python version                    |
 | `battery_notifier_rust-<version>-macos.zip`       | macOS 11 or later, Apple Silicon and Intel |
 | `SHA256SUMS.txt`                                  | Checksums of the files above               |
 
-The Rust and Python versions have the same features and share their settings; the Rust one uses less memory. Only one of them runs at a time.
+The Rust and Python versions have the same features and share their settings; the Rust one uses less memory and updates itself. Only one of them runs at a time.
 
 ### Verify a download
 
@@ -38,6 +38,8 @@ gh attestation verify <file> --repo ldkv/battery-notify
 
 ### Windows
 
+For the Rust version, unzip the file and keep `battery-notifier.exe` where you want it to stay: updates replace it in place.
+
 Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
 
 The first launch of each version of the Python executable unpacks it to `%LOCALAPPDATA%\battery-notifier\app\<version>`, later launches reuse it. Folders of previous versions are deleted automatically.
@@ -51,6 +53,12 @@ The app runs in the system tray.
 3. Allow notifications when asked.
 
 The app lives in the menu bar, without a Dock icon. Bluetooth devices are only supported on Windows.
+
+### Updates
+
+The Rust version checks for a new release when it starts and then once a day. When one is out, a notification says so and the menu shows **Update to <version>**: click it to download, verify and install it, and the app restarts. Each update must carry a valid signature from this project, otherwise it is not installed. If the update cannot be installed, e.g. when the app's folder is not writable, the release page opens to download it by hand.
+
+The Python version does not update itself: download new releases from the release page.
 
 ### Linux: run from source
 
