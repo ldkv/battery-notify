@@ -1,6 +1,7 @@
 import subprocess
 import threading
 
+from PIL import Image
 from pystray import Icon, Menu, MenuItem
 
 from battery_notifier import __version__
@@ -72,12 +73,17 @@ class TrayApp:
     def update(self):
         """Update tray icon, title and menu from the devices' battery levels."""
         self.readings = self.poller.poll(self.settings)
-        self.icon.title = "\n".join(map(format_reading, self.readings)) or NO_DEVICE_TEXT
-        self.icon.icon = self.icon_renderer.render(lowest_level(self.readings), self.settings)
-        self.icon.update_menu()
+        title = "\n".join(map(format_reading, self.readings)) or NO_DEVICE_TEXT
+        image = self.icon_renderer.render(lowest_level(self.readings), self.settings)
+        self.platform.run_on_main_thread(lambda: self.refresh_icon(title, image))
         if due := self.notifier.due(self.readings, self.settings):
             critical = any(battery_status(reading.level, self.settings) is BatteryStatus.CRITICAL for reading in due)
             self.icon.notify("\n".join(map(format_reading, due)), "Critical battery" if critical else "Low battery")
+
+    def refresh_icon(self, title: str, image: Image.Image):
+        self.icon.title = title
+        self.icon.icon = image
+        self.icon.update_menu()
 
     def open_settings(self):
         if self.dialog and self.dialog.poll() is None:

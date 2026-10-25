@@ -1,4 +1,5 @@
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -39,3 +40,7 @@ class Platform:
 
     def open_folder(self, path: Path):
         webbrowser.open(path.as_uri())
+
+    def run_on_main_thread(self, function: Callable[[], None]):
+        """Run `function` on the thread running the tray icon, which owns the GUI."""
+        function()
