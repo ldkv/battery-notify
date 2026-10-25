@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to (re)build and attach the executable to, e.g. v0.3.0"
+        description: "Existing release tag to (re)build and attach the executables to, e.g. v0.3.0"
         type: string
         required: true
 
@@ -40,29 +40,38 @@ jobs:
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         uses: astral-sh/setup-uv@v10.3.2
 
-      - name: Sync uv.lock with bumped version
+      # release-please bumps pyproject.toml and rust/Cargo.toml, not their lock files
+      - name: Sync lock files with bumped version
         if: ${{ steps.release.outputs.prs_created == 'true' }}
         run: |
           uv lock
-          if ! git diff --quiet -- uv.lock; then
+          (cd rust && cargo update --workspace)
+          if ! git diff --quiet -- uv.lock rust/Cargo.lock; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add uv.lock
-            git commit -m "chore: sync uv.lock"
+            git add uv.lock rust/Cargo.lock
+            git commit -m "chore: sync lock files"
             git push
           fi
 
-  # Runs after release-please creates a release, or manually for an existing tag
-  build:
+  # Run after release-please creates a release, or manually for an existing tag
+  build-python:
     needs: release-please
     if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
     uses: ./.github/workflows/python-build-windows.yml
     with:
       ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
 
+  build-rust:
+    needs: release-please
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    uses: ./.github/workflows/rust-ci.yml
+    with:
+      ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
+
   publish:
-    needs: [release-please, build]
-    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    needs: [release-please, build-python, build-rust]
+    if: ${{ !cancelled() && needs.build-python.result == 'success' && needs.build-rust.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -72,20 +81,34 @@ jobs:
       TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Download executable
+      - name: Download Python Windows executable
         uses: actions/download-artifact@v8
         with:
           name: windows-executable
           path: dist
 
+      - name: Download Rust Windows executable
+        uses: actions/download-artifact@v8
+        with:
+          name: rust-windows-executable
+          path: dist
+
+      - name: Download Rust macOS app
+        uses: actions/download-artifact@v8
+        with:
+          name: rust-macos-app
+          path: dist
+
       - name: Generate checksums
         working-directory: dist
-        run: sha256sum *.exe > SHA256SUMS.txt
+        run: sha256sum *.exe *.zip > SHA256SUMS.txt
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: dist/*.exe
+          subject-path: |
+            dist/*.exe
+            dist/*.zip
 
       - name: Upload release assets
         run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

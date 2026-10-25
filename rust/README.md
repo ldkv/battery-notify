@@ -1,6 +1,6 @@
 # Battery Notifier in Rust
 
-A port of the Python app, not released yet: the Python version stays the released one until this one reaches parity and is tested on Windows.
+A port of the Python app, released alongside it: each release contains the Windows executable and the macOS app of this version.
 
 It has the same features and shares its files with the Python version: `config.toml`, the remembered device names and the single-instance lock. Its logs go to `battery_notifier_rust.<date>.log` in the same `Logs` folder. Only one of the two versions can run at a time.
 
@@ -29,7 +29,7 @@ cargo run -- settings  # settings dialog
 cargo run -- --once    # print the battery levels once
 ```
 
-CI builds the Windows executable and the macOS app on each pull request: download `rust-windows-executable` or `rust-macos-app` from the workflow run's artifacts.
+CI builds the Windows executable on each pull request, and the macOS app on `main`: download `rust-windows-executable` or `rust-macos-app` from the workflow run's artifacts.
 
 ## macOS
 
@@ -38,7 +38,7 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are not su
 - Move `Battery Notifier.app` to Applications or `~/Applications` before opening it: macOS refuses notifications to an app run from elsewhere, e.g. the build folder. The first launch asks to allow notifications.
 - Run from source (`cargo run`), there is no app bundle, so notifications go through AppleScript and show as from Script Editor.
 - Run at startup writes a LaunchAgent, `~/Library/LaunchAgents/io.github.ldkv.battery-notifier.plist`.
-- The app is not notarized. After downloading it, clear the quarantine flag before opening it: `xattr -dr com.apple.quarantine "Battery Notifier.app"`.
+- The app is not notarized: see [Install on macOS](../README.md#macos) to open it after downloading.
 
 ## Layout
 

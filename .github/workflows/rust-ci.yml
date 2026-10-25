@@ -11,9 +11,17 @@ on:
     paths:
       - "rust/**"
       - ".github/workflows/rust-ci.yml"
+  # Releases build the Windows executable and the macOS app of the released tag
+  workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to build"
+        type: string
+        required: true
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Not github.workflow: when called, it is the caller's name, shared with the Python build
+  group: rust-ci-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -22,6 +30,8 @@ defaults:
 
 jobs:
   check:
+    # Releases only build: this code was checked when merged to main
+    if: ${{ !inputs.ref }}
     strategy:
       fail-fast: false
       matrix:
@@ -30,6 +40,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -58,6 +70,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
@@ -159,6 +173,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Add Intel target
         run: rustup target add x86_64-apple-darwin

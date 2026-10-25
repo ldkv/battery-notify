@@ -10,32 +10,51 @@ A Windows tray app that watches the battery of your wireless devices:
 
 ## Install
 
+Each [release](https://github.com/ldkv/battery-notify/releases/latest) contains:
+
+| File                                              | For                                        |
+| ------------------------------------------------- | ------------------------------------------ |
+| `battery_notifier_rust-<version>-windows-x64.exe` | Windows, Rust version                      |
+| `battery_notifier-<version>-windows-x64.exe`      | Windows, Python version                    |
+| `battery_notifier_rust-<version>-macos.zip`       | macOS 11 or later, Apple Silicon and Intel |
+| `SHA256SUMS.txt`                                  | Checksums of the files above               |
+
+The Rust and Python versions have the same features and share their settings; the Rust one uses less memory. Only one of them runs at a time.
+
+### Verify a download
+
+Optionally, the hash of a file must match the one in `SHA256SUMS.txt`:
+
+```powershell
+certutil -hashfile <file> SHA256   # Windows
+shasum -a 256 <file>               # macOS
+```
+
+The build provenance can also be verified with the GitHub CLI:
+
+```powershell
+gh attestation verify <file> --repo ldkv/battery-notify
+```
+
 ### Windows
 
-1. Download `battery_notifier-<version>-windows-x64.exe` and `SHA256SUMS.txt` from the [latest release](https://github.com/ldkv/battery-notify/releases/latest).
-2. Optionally verify the download: the hash printed by the command below must match the one in `SHA256SUMS.txt`.
+Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
 
-   ```powershell
-   certutil -hashfile battery_notifier-<version>-windows-x64.exe SHA256
-   ```
+The first launch of each version of the Python executable unpacks it to `%LOCALAPPDATA%\battery-notifier\app\<version>`, later launches reuse it. Folders of previous versions are deleted automatically.
 
-   The build provenance can also be verified with the GitHub CLI:
+The app runs in the system tray.
 
-   ```powershell
-   gh attestation verify battery_notifier-<version>-windows-x64.exe --repo ldkv/battery-notify
-   ```
+### macOS
 
-3. Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
+1. Unzip the file and move `Battery Notifier.app` to Applications: macOS only allows notifications from an app in Applications or `~/Applications`.
+2. The app is not notarized by Apple, so macOS blocks its first launch. Open it once, then allow it in **System Settings** → **Privacy & Security** → **Open Anyway**. Alternatively, clear the download's quarantine flag from a terminal: `xattr -dr com.apple.quarantine "/Applications/Battery Notifier.app"`.
+3. Allow notifications when asked.
 
-   The first launch of each version unpacks the app to `%LOCALAPPDATA%\battery-notifier\app\<version>`, later launches reuse it. Folders of previous versions are deleted automatically.
+The app lives in the menu bar, without a Dock icon. Bluetooth devices are only supported on Windows.
 
-The app runs in the system tray. Only one instance runs at a time.
+### Linux: run from source
 
-### macOS / Linux: run from source
-
-There is no official release for macOS or Linux. The app runs from source on macOS, Linux is untested, and Bluetooth devices are only supported on Windows.
-
-Install [uv](https://docs.astral.sh/uv/) and [Task](https://taskfile.dev/), then:
+There is no release for Linux, which is untested. Install [uv](https://docs.astral.sh/uv/) and [Task](https://taskfile.dev/), then:
 
 ```bash
 git clone https://github.com/ldkv/battery-notify.git
@@ -44,9 +63,7 @@ task dev-install
 uv run battery-notifier
 ```
 
-To build the standalone executable into `dist/` on Windows, run `task generate-executable` (uses [Nuitka](https://nuitka.net/) and a C compiler, e.g. Visual Studio Build Tools).
-
-A Rust version is in progress in [rust/](rust/README.md).
+To build the Python executable into `dist/` on Windows, run `task generate-executable` (uses [Nuitka](https://nuitka.net/) and a C compiler, e.g. Visual Studio Build Tools). To build and run the Rust version, see [rust/README.md](rust/README.md).
 
 ## Settings
 
