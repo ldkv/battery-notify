@@ -52,6 +52,9 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    env:
+      # Pull requests build the faster `ci` profile, main the release one
+      CARGO_PROFILE: ${{ github.event_name == 'pull_request' && 'ci' || 'release' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -62,13 +65,13 @@ jobs:
           workspaces: rust
 
       - name: Build executable
-        run: cargo build --release --locked
+        run: cargo build --profile $env:CARGO_PROFILE --locked
 
       # The windowed exe has no console, so wait for each step to be logged rather than for the process to exit.
       - name: Smoke test executable
         shell: pwsh
         run: |
-          $exe = Resolve-Path "target/release/battery-notifier.exe"
+          $exe = Resolve-Path "target/$env:CARGO_PROFILE/battery-notifier.exe"
           $logDir = Join-Path $env:LOCALAPPDATA "battery-notifier/Logs"
           function Wait-ForLog($pattern) {
             $deadline = (Get-Date).AddSeconds(120)
@@ -79,12 +82,26 @@ jobs:
             }
             return $false
           }
-          Start-Process -FilePath $exe
+          # Private working set is the Memory column of Task Manager: RAM used by the process alone
+          function Get-MemoryRow($name, $process) {
+            $perf = Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -Filter "IDProcess=$($process.Id)"
+            $process.Refresh()
+            "| $name | {0:N1} | {1:N1} | {2:N1} |" -f ($perf.WorkingSetPrivate / 1MB), ($process.WorkingSet64 / 1MB), ($process.PrivateMemorySize64 / 1MB)
+          }
+          $trayProcess = Start-Process -FilePath $exe -PassThru
           $tray = Wait-ForLog "Next check in"
-          Start-Process -FilePath $exe -ArgumentList "settings"
+          $dialogProcess = Start-Process -FilePath $exe -ArgumentList "settings" -PassThru
           $dialog = Wait-ForLog "Settings dialog ready"
           if ($dialog) {
             Start-Sleep -Seconds 2
+            $memory = @(
+              "| Process | Private working set (MB) | Working set (MB) | Private bytes (MB) |",
+              "|---|---|---|---|",
+              (Get-MemoryRow "Tray" $trayProcess),
+              (Get-MemoryRow "Settings dialog" $dialogProcess)
+            )
+            $memory
+            $memory >> $env:GITHUB_STEP_SUMMARY
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
             $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
@@ -116,23 +133,28 @@ jobs:
           path: ${{ runner.temp }}/settings-dialog.png
           if-no-files-found: ignore
 
+      # Also when the smoke test fails, to download and debug the build
       - name: Rename executable with version
+        if: ${{ !cancelled() }}
         id: rename
         shell: pwsh
         run: |
           $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
           $name = "battery_notifier_rust-$version-windows-x64.exe"
-          Move-Item "target/release/battery-notifier.exe" "target/release/$name"
+          Move-Item "target/$env:CARGO_PROFILE/battery-notifier.exe" "target/$env:CARGO_PROFILE/$name"
           "name=$name" >> $env:GITHUB_OUTPUT
 
       - name: Upload executable
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: rust-windows-executable
-          path: rust/target/release/${{ steps.rename.outputs.name }}
+          path: rust/target/${{ env.CARGO_PROFILE }}/${{ steps.rename.outputs.name }}
           if-no-files-found: error
 
+  # Pull requests compile and test on macOS in the check job: build the app on main only
   build-macos:
+    if: github.event_name != 'pull_request'
     runs-on: macos-latest
     steps:
       - name: Checkout repo
