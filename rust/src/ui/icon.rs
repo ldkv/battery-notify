@@ -11,7 +11,8 @@ use crate::core::settings::Settings;
 
 pub const SIZE: u32 = 64;
 /// The app icon, a battery in a gear, rendered from assets/icon/app-icon.svg by scripts/render_app_icon.py.
-pub const APP_ICON_PNG: &[u8] = include_bytes!("../../../assets/icon/app-icon.png");
+/// One PNG for both versions: it lives in the Python package, which must contain it.
+pub const APP_ICON_PNG: &[u8] = include_bytes!("../../../src/battery_notifier/assets/app-icon.png");
 const LOW_COLOR: Rgb = Rgb(0xff, 0xb9, 0x00); // Windows amber
 const CRITICAL_COLOR: Rgb = Rgb(0xe8, 0x11, 0x23); // Windows red
 const ON_DARK_COLOR: Rgb = Rgb(0xff, 0xff, 0xff);
