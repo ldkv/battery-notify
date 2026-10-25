@@ -4,13 +4,13 @@ on:
   pull_request:
     paths:
       - "rust/**"
-      - ".github/workflows/rust.yml"
+      - ".github/workflows/rust-ci.yml"
   push:
     branches:
       - main
     paths:
       - "rust/**"
-      - ".github/workflows/rust.yml"
+      - ".github/workflows/rust-ci.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
