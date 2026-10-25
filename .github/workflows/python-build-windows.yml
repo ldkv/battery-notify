@@ -38,6 +38,14 @@ jobs:
       - name: Install Taskfile CLI
         uses: go-task/setup-task@v2
 
+      # Nuitka's C compiler cache: unchanged modules are not compiled again
+      - name: Cache Nuitka
+        uses: actions/cache@v6
+        with:
+          path: ~/AppData/Local/Nuitka/Nuitka/Cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('uv.lock', 'Taskfile.yml') }}
+          restore-keys: nuitka-${{ runner.os }}-
+
       - name: Build executable
         run: task generate-executable
 
