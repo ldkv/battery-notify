@@ -198,7 +198,8 @@ impl eframe::App for SettingsDialog {
 }
 
 /// Show the dialog until closed, return true if the settings were saved.
-pub fn run(platform: Arc<dyn Platform>, settings: Settings) -> bool {
+/// With `close_with_tray`, also close without saving once stdin closes, i.e. when the tray app quits.
+pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: bool) -> bool {
     let theme_platform = platform.clone();
     let icon =
         icon_renderer(platform.icon_font(), move || theme_platform.apps_use_dark_theme()).render(None, &settings);
@@ -228,6 +229,9 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings) -> bool {
             } else {
                 creation.egui_ctx.system_theme() == Some(Theme::Dark)
             };
+            if close_with_tray {
+                close_when_tray_quits(creation.egui_ctx.clone());
+            }
             let autostart = platform.is_autostart_enabled();
             Ok(Box::new(SettingsDialog {
                 platform,
@@ -244,6 +248,19 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings) -> bool {
         tracing::error!("Could not open the settings dialog: {e}");
     }
     saved.load(Ordering::SeqCst)
+}
+
+/// Close the dialog once stdin closes: the tray app holds the other end until it quits or crashes.
+fn close_when_tray_quits(ctx: egui::Context) {
+    let spawned = std::thread::Builder::new().name("tray_watch".to_string()).spawn(move || {
+        let _ = std::io::copy(&mut std::io::stdin().lock(), &mut std::io::sink());
+        tracing::info!("Tray app closed, closing the settings dialog");
+        ctx.send_viewport_cmd(ViewportCommand::Close);
+        ctx.request_repaint();
+    });
+    if let Err(e) = spawned {
+        tracing::error!("Could not watch the tray app: {e}");
+    }
 }
 
 #[cfg(test)]

@@ -88,7 +88,9 @@ class TrayApp:
     def open_settings(self):
         if self.dialog and self.dialog.poll() is None:
             return
-        self.dialog = subprocess.Popen(app_command("settings"), env=app_environment())
+        # The dialog closes itself when this end of its stdin closes, i.e. when the tray app quits or crashes
+        command = app_command("settings", "--close-with-tray")
+        self.dialog = subprocess.Popen(command, stdin=subprocess.PIPE, env=app_environment())
         threading.Thread(name="settings_dialog", target=self.wait_for_dialog, args=[self.dialog], daemon=True).start()
 
     def wait_for_dialog(self, dialog: subprocess.Popen):

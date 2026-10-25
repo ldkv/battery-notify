@@ -3,6 +3,8 @@ Settings dialog, generated from the `Settings` fields.
 Runs in its own process: `battery-notifier settings`, exit code 0 when saved.
 """
 
+import os
+import threading
 import tkinter as tk
 import tkinter.font as tkfont
 from dataclasses import replace
@@ -25,6 +27,7 @@ ROW_GAP = 12
 ERROR_COLORS = {"light": "#c42b1c", "dark": "#ff99a4"}
 CAPTION_COLORS = {"light": "#5d5d5d", "dark": "#a0a0a0"}
 NOT_A_NUMBER = "Must be a whole number"
+TRAY_WATCH_MS = 250
 
 
 class SettingsDialog:
@@ -182,8 +185,33 @@ class SettingsDialog:
         self.root.geometry(f"{width}x{height}+{x}+{y}")
         self.root.deiconify()
 
-    def run(self) -> bool:
-        """Show the dialog until closed, return True if the settings were saved."""
+    def close_when(self, event: threading.Event):
+        """Close the dialog once event is set: tk is not thread-safe, so poll it from the tk loop."""
+        if event.is_set():
+            logger.info("Tray app closed, closing the settings dialog")
+            self.root.destroy()
+            return
+        self.root.after(TRAY_WATCH_MS, self.close_when, event)
+
+    def run(self, close_with_tray: bool = False) -> bool:
+        """
+        Show the dialog until closed, return True if the settings were saved.
+        With close_with_tray, also close without saving once stdin closes, i.e. when the tray app quits.
+        """
+        if close_with_tray:
+            tray_closed = threading.Event()
+            threading.Thread(name="tray_watch", target=wait_for_end_of_input, args=[tray_closed], daemon=True).start()
+            self.close_when(tray_closed)
         self.root.after_idle(lambda: logger.info("Settings dialog ready"))
         self.root.mainloop()
         return self.saved
+
+
+def wait_for_end_of_input(done: threading.Event):
+    """Read stdin until it closes, then set done."""
+    try:
+        while os.read(0, 1024):
+            pass
+    except OSError:
+        pass  # no usable stdin: nothing to wait for
+    done.set()

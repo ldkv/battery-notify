@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -217,7 +217,9 @@ fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake:
     if dialog_open.swap(true, Ordering::SeqCst) {
         return;
     }
-    let child = std::env::current_exe().and_then(|exe| Command::new(exe).arg("settings").spawn());
+    // The dialog closes itself when its stdin closes, i.e. when the tray app quits or crashes
+    let child = std::env::current_exe()
+        .and_then(|exe| Command::new(exe).args(["settings", "--close-with-tray"]).stdin(Stdio::piped()).spawn());
     let mut child = match child {
         Ok(child) => child,
         Err(e) => {
@@ -228,6 +230,8 @@ fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake:
     };
     let (dialog_open, settings, wake) = (dialog_open.clone(), settings.clone(), wake.clone());
     thread::spawn(move || {
+        // Keep the dialog's stdin open while it runs: Child::wait closes it before waiting
+        let _tray_end = child.stdin.take();
         let saved = child.wait().is_ok_and(|status| status.success());
         dialog_open.store(false, Ordering::SeqCst);
         if saved {
