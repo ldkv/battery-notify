@@ -48,7 +48,14 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
     platform.register_notifications();
 
     let settings: SharedSettings = Arc::new(Mutex::new(Settings::load()));
-    let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    // No Dock icon: the app lives in the menu bar
+    #[cfg(target_os = "macos")]
+    tao::platform::macos::EventLoopExtMacOS::set_activation_policy(
+        &mut event_loop,
+        tao::platform::macos::ActivationPolicy::Accessory,
+    );
     let proxy = event_loop.create_proxy();
     let menu_proxy = proxy.clone();
     MenuEvent::set_event_handler(Some(move |event| {
@@ -188,7 +195,7 @@ fn device_loop(
         }
         let due = notifier.due(&readings, &settings, Instant::now());
         if !due.is_empty() {
-            notify(&due, &settings);
+            notify(platform.as_ref(), &due, &settings);
         }
 
         let interval = Duration::from_secs(u64::try_from(settings.check_interval_minutes).unwrap_or(1) * 60);
@@ -200,18 +207,9 @@ fn device_loop(
     }
 }
 
-fn notify(due: &[BatteryReading], settings: &Settings) {
+fn notify(platform: &dyn Platform, due: &[BatteryReading], settings: &Settings) {
     let critical = due.iter().any(|reading| battery_status(reading.level, settings) == BatteryStatus::Critical);
-    let mut notification = notify_rust::Notification::new();
-    notification
-        .appname("Battery Notifier")
-        .summary(if critical { "Critical battery" } else { "Low battery" })
-        .body(&tooltip(due));
-    #[cfg(windows)]
-    notification.app_id(crate::platforms::windows::APP_USER_MODEL_ID);
-    if let Err(e) = notification.show() {
-        tracing::error!("Could not show the notification: {e}");
-    }
+    platform.show_notification(if critical { "Critical battery" } else { "Low battery" }, &tooltip(due));
 }
 
 /// Open the settings dialog in its own process, and reload the settings once it saved them.

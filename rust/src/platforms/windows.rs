@@ -9,7 +9,7 @@ use windows::Win32::System::Threading::CreateMutexW;
 use windows::core::HSTRING;
 use windows_registry::CURRENT_USER;
 
-use super::Platform;
+use super::{APP_TITLE, Platform};
 use crate::core::paths::state_dir;
 use crate::ui::icon::{icon_png, icon_renderer};
 
@@ -77,6 +77,18 @@ impl Platform for WindowsPlatform {
         }
     }
 
+    fn show_notification(&self, title: &str, body: &str) {
+        let result = notify_rust::Notification::new()
+            .appname(APP_TITLE)
+            .app_id(APP_USER_MODEL_ID)
+            .summary(title)
+            .body(body)
+            .show();
+        if let Err(e) = result {
+            tracing::error!("Could not show the notification: {e}");
+        }
+    }
+
     #[allow(unsafe_code)]
     fn attach_console(&self) {
         // SAFETY: plain Win32 call, fails harmlessly when there is no parent console.
@@ -104,7 +116,7 @@ fn register_app_user_model_id(platform: &WindowsPlatform) -> io::Result<()> {
     let renderer = icon_renderer(platform.icon_font(), || false);
     fs::write(&icon_path, icon_png(renderer.as_ref(), Some(20))?)?;
     let key = CURRENT_USER.create(APP_USER_MODEL_KEY)?;
-    key.set_string("DisplayName", "Battery Notifier")?;
+    key.set_string("DisplayName", APP_TITLE)?;
     key.set_string("IconUri", icon_path.display().to_string())?;
     Ok(())
 }

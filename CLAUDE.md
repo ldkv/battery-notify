@@ -38,7 +38,7 @@ Check layout locally under Xvfb: `DIALOG_SCREENSHOTS=shots xvfb-run -a uv run py
 
 ## Rust port
 
-`rust/` is a standalone Cargo package porting the app, same module layout, not released yet. It shares `config.toml`, the seen devices file and the single-instance mutex with the Python version. Checks: `task rust-check` and `task rust-test`; the `rust` workflow also builds and smoke tests the Windows exe. When changing a feature, change both versions until Python is retired.
+`rust/` is a standalone Cargo package porting the app, same module layout, not released yet. It shares `config.toml`, the seen devices file and the single-instance mutex with the Python version. Checks: `task rust-check` and `task rust-test`; the `rust-ci` workflow also builds and smoke tests the Windows exe and the macOS app (`rust/macos/bundle.sh`: universal binary through `lipo`, ad-hoc signed). On macOS, the tray runs with the `Accessory` activation policy (no Dock icon) but the settings dialog does not, so it can take focus; notifications go through `osascript`, as macOS drops them from an unbundled binary. Non-Windows single instance is a `flock` on `<state_dir>/<name>.lock`. When changing a feature, change both versions until Python is retired.
 
 ## Commits
 
