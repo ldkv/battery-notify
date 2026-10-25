@@ -1,7 +1,13 @@
-name: "Linter, type checker, and tests"
+name: "Python: Linter, type checker, and tests"
 
 on:
   pull_request:
+    paths:
+      - "Taskfile.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "src/**"
+      - ".github/workflows/python-ci.yml"
   push:
     branches:
       - main

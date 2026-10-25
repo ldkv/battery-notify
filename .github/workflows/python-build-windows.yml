@@ -1,13 +1,12 @@
-name: "Build Windows executable"
+name: "Python: Build Windows executable"
 
 on:
   pull_request:
     paths:
-      - "Taskfile.yml"
       - "pyproject.toml"
       - "uv.lock"
       - "src/**"
-      - ".github/workflows/build-windows.yml"
+      - ".github/workflows/python-build-windows.yml"
   workflow_call:
     inputs:
       ref:
