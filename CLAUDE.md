@@ -21,7 +21,7 @@ Windows is the target: pyrefly checks the whole project with `python-platform = 
 
 ## Icons
 
-The app icon (Windows executables, macOS app, settings dialog, Rust notifications) comes from `assets/icon/app-icon.svg`. After editing it, regenerate the committed `.ico` and `.icns` beside it and the PNG in `src/battery_notifier/assets/`, which the Rust binary also embeds: `uvx --from cairosvg --with pillow python scripts/render_app_icon.py`.
+The app icon (Windows executables, macOS app, settings dialog, Rust notifications) comes from `src/battery_notifier/assets/app-icon.svg`. After editing it, regenerate the committed `.png`, `.ico` and `.icns` beside it, used by both versions: `uvx --from cairosvg --with pillow python scripts/render_app_icon.py`.
 
 The tray icon is separate: a live battery glyph.
 

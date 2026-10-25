@@ -17,5 +17,5 @@ lipo -create -output "$app/Contents/MacOS/battery-notifier" \
     target/x86_64-apple-darwin/release/battery-notifier
 sed "s/@VERSION@/$version/" macos/Info.plist > "$app/Contents/Info.plist"
 mkdir -p "$app/Contents/Resources"
-cp ../assets/icon/app-icon.icns "$app/Contents/Resources/AppIcon.icns"
+cp ../src/battery_notifier/assets/app-icon.icns "$app/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$app"
