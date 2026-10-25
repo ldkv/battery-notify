@@ -124,3 +124,10 @@ tasks:
     dir: rust
     cmds:
       - cargo build --release --locked
+
+  rust-build-macos:
+    desc: Build the Rust version as a universal macOS app into "rust/target/release/Battery Notifier.app"
+    dir: rust
+    cmds:
+      - rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - macos/bundle.sh
