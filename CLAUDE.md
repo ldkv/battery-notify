@@ -25,7 +25,7 @@ Glyphs come from Segoe Fluent Icons / Segoe MDL2 Assets: `Battery0`–`Battery9`
 
 ## Seeing the GUI
 
-There is no display on Linux. The Windows CI jobs upload screenshots as artifacts: `settings-dialog-errors` and `tray-icons` (ci workflow), `settings-dialog-screenshot` (build workflow). Fetch them with `gh run download <run-id> -n <artifact>` and look at them before claiming a UI change works.
+Check layout locally under Xvfb: `DIALOG_SCREENSHOTS=shots xvfb-run -a uv run pytest tests/test_settings_dialog.py` saves the dialog with each error shown. Linux lacks Segoe UI, so judge the look from Windows: the CI jobs upload screenshots as artifacts, `settings-dialog-errors` and `tray-icons` (ci workflow), `settings-dialog-screenshot` (build workflow). Fetch them with `gh run download <run-id> -n <artifact>` and look at them before claiming a UI change works.
 
 ## Build
 

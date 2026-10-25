@@ -1,12 +1,12 @@
-[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border-orange.json)](https://github.com/copier-org/copier)
-
 # battery-notifier
-
-This repository is generated and synced from [template-python-package](https://github.com/veesion-io/template-python-package).
 
 ## About
 
-Notify when battery is low
+A Windows tray app that watches the battery of your wireless devices:
+
+- The tray icon shows the lowest battery level, following the taskbar theme, amber when low and red when critical.
+- Hover the icon or right-click it to see the level of each device.
+- A notification shows when a device runs low, and repeats while it stays low (configurable).
 
 ## Install
 
@@ -50,7 +50,7 @@ A Rust version is in progress in [rust/](rust/README.md).
 
 ## Settings
 
-Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, which devices are checked, and whether the app runs at startup.
+Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, how often the low battery notification repeats, which devices are checked, and whether the app runs at startup.
 
 Settings are saved to `config.toml` and logs to `Logs/battery_notifier.log`, both under `%LOCALAPPDATA%\battery-notifier` (**Open settings folder** in the tray menu). On macOS / Linux, they follow the OS conventions of [platformdirs](https://platformdirs.readthedocs.io/).
 

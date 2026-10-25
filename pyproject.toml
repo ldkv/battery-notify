@@ -17,17 +17,23 @@ dependencies = [
     "pystray==0.19.5",
     "sv-ttk==2.6.1",
     "tomli-w==1.2.0",
-    "winrt-runtime==3.2.1; sys_platform == 'win32'",
-    "winrt-windows-devices-enumeration==3.2.1; sys_platform == 'win32'",
-    "winrt-windows-foundation==3.2.1; sys_platform == 'win32'",
-    "winrt-windows-foundation-collections==3.2.1; sys_platform == 'win32'",
+    "winrt-runtime==4.0.3; sys_platform == 'win32'",
+    "winrt-windows-devices-enumeration==v4!10.0.28000.2705; sys_platform == 'win32'",
+    "winrt-windows-foundation==v4!10.0.28000.2705; sys_platform == 'win32'",
+    "winrt-windows-foundation-collections==v4!10.0.28000.2705; sys_platform == 'win32'",
 ]
 
 [project.scripts]
 battery-notifier = "battery_notifier.main:main"
 
 [dependency-groups]
-dev = ["nuitka==4.3.1", "pyrefly==1.4.0", "pytest==9.1.1", "ruff==0.17.2", "zstandard==0.25.0"]
+dev = [
+    "nuitka==4.3.1",
+    "pyrefly==1.4.0",
+    "pytest==9.1.1",
+    "ruff==0.17.2",
+    "zstandard==0.25.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]
