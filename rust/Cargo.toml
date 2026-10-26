@@ -61,6 +61,8 @@ block2 = "0.6.2"
 objc2 = "0.6.5"
 objc2-foundation = { version = "0.3.2", features = ["NSBundle", "NSError", "NSString"] }
 objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger", "UNUserNotificationCenter"] }
+# The winit of eframe, for its macOS event loop options: keep both versions in step
+winit = { version = "0.30.13", default-features = false }
 
 [target."cfg(windows)".build-dependencies]
 winresource = "0.1.34"

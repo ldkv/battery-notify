@@ -192,6 +192,10 @@ impl eframe::App for SettingsDialog {
         }
         if !self.ready {
             self.ready = true;
+            // A macOS agent app is not brought to the front by itself: take the keyboard focus
+            if cfg!(target_os = "macos") {
+                ctx.send_viewport_cmd(ViewportCommand::Focus);
+            }
             tracing::info!("Settings dialog ready");
         }
     }
@@ -209,7 +213,16 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: boo
         Ok(icon) => viewport = viewport.with_icon(icon),
         Err(e) => tracing::warn!("Invalid app icon: {e}"),
     }
-    let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
+    // A menu bar agent like the tray, so the open dialog stays out of the Dock and Cmd+Tab
+    #[cfg(target_os = "macos")]
+    {
+        use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
+        options.event_loop_builder = Some(Box::new(|builder| {
+            builder.with_activation_policy(ActivationPolicy::Accessory);
+        }));
+    }
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
     let device_names = known_device_names(&settings, &seen_devices_file());
