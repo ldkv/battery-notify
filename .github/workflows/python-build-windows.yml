@@ -77,6 +77,9 @@ jobs:
             $bitmap.Save("$env:RUNNER_TEMP/settings-dialog.png")
           }
           Stop-Process -Name "battery_notifier" -Force -ErrorAction SilentlyContinue
+          # Stop-Process returns before the processes are gone: a dialog still exiting holds the
+          # single-instance lock, and the next one would exit at once
+          Get-Process -Name "battery_notifier" -ErrorAction SilentlyContinue | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
           # The tray starts the dialog with a pipe on its stdin: closing that pipe must close the dialog
           $start = [System.Diagnostics.ProcessStartInfo]::new($exe, "settings --close-with-tray")
           $start.UseShellExecute = $false

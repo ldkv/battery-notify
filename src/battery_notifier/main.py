@@ -36,6 +36,7 @@ def run_settings_dialog(platform: Platform, close_with_tray: bool) -> int:
     from battery_notifier.ui.settings_dialog import SettingsDialog  # noqa: PLC0415
 
     if not platform.acquire_single_instance("BatteryNotifier.Settings"):
+        logger.info("Settings dialog already open, exiting")
         return 1
     return 0 if SettingsDialog(platform, Settings.load()).run(close_with_tray) else 1
 

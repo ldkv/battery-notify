@@ -71,6 +71,7 @@ fn main() -> ExitCode {
 /// Exit code 0 when the settings were saved.
 fn run_settings_dialog(platform: std::sync::Arc<dyn Platform>, close_with_tray: bool) -> ExitCode {
     if !platform.acquire_single_instance("BatteryNotifier.Settings") {
+        tracing::info!("Settings dialog already open, exiting");
         return ExitCode::FAILURE;
     }
     if settings_dialog::run(platform, Settings::load(), close_with_tray) {

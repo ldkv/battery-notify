@@ -27,7 +27,11 @@ class BatteryProvider(Protocol):
 
 
 class HIDProvider:
-    """Devices are looked up once found, and searched again on each read until then."""
+    """
+    Devices are looked up once found, and searched again on each read until then.
+    A found device that does not answer is searched again right away: it may have come back under
+    a new path, e.g. after the computer slept, and the stored one would keep failing.
+    """
 
     def __init__(self):
         self._devices: dict[str, BaseDevice] = {}
@@ -41,12 +45,19 @@ class HIDProvider:
         for device_class in HID_DEVICES:
             if not settings.is_enabled(device_class.name):
                 continue
-            device = self._find(device_class)
-            if device is None:
-                continue
-            level = int(device.update_battery_level())
-            readings.append(BatteryReading(device.name, None if level == DEFAULT_BATTERY_LEVEL else level))
+            level = self._level(device_class)
+            if level == DEFAULT_BATTERY_LEVEL:
+                logger.info(f"No answer from {device_class.name}, searching it again")
+                self._devices.pop(device_class.name, None)
+                level = self._level(device_class)
+            if level is not None:
+                readings.append(BatteryReading(device_class.name, None if level == DEFAULT_BATTERY_LEVEL else level))
         return readings
+
+    def _level(self, device_class: type[BaseDevice]) -> int | None:
+        """None when the device is not found."""
+        device = self._find(device_class)
+        return None if device is None else int(device.update_battery_level())
 
     def _find(self, device_class: type[BaseDevice]) -> BaseDevice | None:
         if device_class.name not in self._devices:
