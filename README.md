@@ -12,12 +12,12 @@ A Windows tray app that watches the battery of your wireless devices:
 
 Each [release](https://github.com/ldkv/battery-notify/releases/latest) contains:
 
-| File                                              | For                                        |
-| ------------------------------------------------- | ------------------------------------------ |
-| `battery_notifier_rust-<version>-windows-x64.zip` | Windows, Rust version                      |
-| `battery_notifier-<version>-windows-x64.exe`      | Windows, Python version                    |
-| `battery_notifier_rust-<version>-macos.zip`       | macOS 11 or later, Apple Silicon and Intel |
-| `SHA256SUMS.txt`                                  | Checksums of the files above               |
+| File                                                | For                                        |
+| --------------------------------------------------- | ------------------------------------------ |
+| `battery_notifier_rust-<version>-windows-x64.zip`   | Windows, Rust version                      |
+| `battery_notifier_python-<version>-windows-x64.exe` | Windows, Python version                    |
+| `battery_notifier_rust-<version>-macos.zip`         | macOS 11 or later, Apple Silicon and Intel |
+| `SHA256SUMS.txt`                                    | Checksums of the files above               |
 
 The Rust and Python versions have the same features and share their settings; the Rust one uses less memory and updates itself. Only one of them runs at a time.
 
@@ -38,7 +38,7 @@ gh attestation verify <file> --repo ldkv/battery-notify
 
 ### Windows
 
-For the Rust version, unzip the file and keep `battery-notifier.exe` where you want it to stay: updates replace it in place.
+For the Rust version, unzip the file and keep `battery_notifier_rust-<version>.exe` in a folder you can write to, e.g. `%LOCALAPPDATA%\Programs\BatteryNotifier`: each update puts the new version next to it, under its own name, and deletes the old one. Run at startup follows the new file, but shortcuts to the old one stop working.
 
 Run the executable. It is not code-signed, so Windows SmartScreen may warn about an unknown publisher: click **More info** → **Run anyway**.
 

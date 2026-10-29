@@ -81,23 +81,24 @@ jobs:
       TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Download Python Windows executable
+      # The Python exe and the Rust zips: artifacts named after their file, not the screenshots.
+      # skip-decompress keeps the Rust zips as they are; each lands in a folder named after the
+      # artifact, so the file keeps its name whatever name the download gives it.
+      - name: Download executables
         uses: actions/download-artifact@v8
         with:
-          name: windows-executable
-          path: dist
+          pattern: battery_notifier_*
+          skip-decompress: true
+          path: artifacts
 
-      - name: Download Rust Windows executable
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-windows-executable
-          path: dist
-
-      - name: Download Rust macOS app
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-macos-app
-          path: dist
+      - name: Collect executables
+        run: |
+          mkdir dist
+          for dir in artifacts/*/; do
+            name=$(basename "$dir")
+            mv "$dir"* "dist/$name"
+          done
+          ls -l dist
 
       # The app's updater only installs a zip signed for its file name: see rust/README.md
       - name: Checkout public signing key

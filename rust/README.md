@@ -29,7 +29,7 @@ cargo run -- settings  # settings dialog
 cargo run -- --once    # print the battery levels once
 ```
 
-CI builds the Windows executable on each pull request, and the macOS app on `main`: download `rust-windows-executable` or `rust-macos-app` from the workflow run's artifacts.
+CI builds the Windows executable on each pull request, and the macOS app on `main`: download `battery_notifier_rust-<version>-windows-x64.zip` or `battery_notifier_rust-<version>-macos.zip` from the workflow run's artifacts.
 
 ## macOS
 
@@ -42,7 +42,7 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are not su
 
 ## Updates
 
-The app updates itself from GitHub releases (`src/updater.rs`): it finds the release zip for its platform, checks its signature against `updater-key.pub`, then replaces the executable on Windows (`self-replace`) or the whole `.app` bundle on macOS, and restarts with `--after-update`, which waits for the previous version to exit. Development builds do not check for updates.
+The app updates itself from GitHub releases (`src/updater.rs`): it finds the release zip for its platform, checks its signature against `updater-key.pub`, then installs it and restarts with `--after-update`, which waits for the previous version to exit. On Windows, the zip holds `battery_notifier_rust-<version>.exe`: the updater copies it next to the running exe, which cannot be overwritten, and starts it with `--after-update <previous exe>` so that it deletes the previous version; Run at startup is pointed to the exe on each start. On macOS, it replaces the whole `.app` bundle. Development builds do not check for updates.
 
 The release workflow signs each Rust zip with [zipsign](https://github.com/Kijewski/zipsign), for its file name, using the `ZIPSIGN_PRIVATE_KEY` repository secret, then verifies it against `updater-key.pub`. To create or replace the key pair:
 
