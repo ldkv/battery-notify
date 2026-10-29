@@ -10,14 +10,16 @@ A Windows tray app that watches the battery of your wireless devices:
 
 ## Install
 
-Each [release](https://github.com/ldkv/battery-notify/releases/latest) contains:
+The Rust and Python versions are released separately, each with its own version. The [latest release](https://github.com/ldkv/battery-notify/releases/latest) is the Rust one, tagged `v<version>`; Python releases are tagged `python-v<version>`, see [all releases](https://github.com/ldkv/battery-notify/releases).
 
-| File                                                | For                                        |
-| --------------------------------------------------- | ------------------------------------------ |
-| `battery_notifier_rust-<version>-windows-x64.zip`   | Windows, Rust version                      |
-| `battery_notifier_python-<version>-windows-x64.exe` | Windows, Python version                    |
-| `battery_notifier_rust-<version>-macos.zip`         | macOS 11 or later, Apple Silicon and Intel |
-| `SHA256SUMS.txt`                                    | Checksums of the files above               |
+| File                                                | Release | For                                        |
+| --------------------------------------------------- | ------- | ------------------------------------------ |
+| `battery_notifier_rust-<version>-windows-x64.zip`   | Rust    | Windows                                    |
+| `battery_notifier_rust-<version>-macos.zip`         | Rust    | macOS 11 or later, Apple Silicon and Intel |
+| `battery_notifier_python-<version>-windows-x64.exe` | Python  | Windows                                    |
+| `SHA256SUMS.txt`                                    | Both    | Checksums of the release's files           |
+
+Releases up to 0.5.2 contain both versions.
 
 The Rust and Python versions have the same features and share their settings; the Rust one uses less memory and updates itself. Only one of them runs at a time.
 
