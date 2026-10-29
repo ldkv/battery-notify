@@ -108,13 +108,14 @@ jobs:
         id: rename
         shell: pwsh
         run: |
-          $name = "battery_notifier-$(uv version --short)-windows-x64.exe"
+          $name = "battery_notifier_python-$(uv version --short)-windows-x64.exe"
           Move-Item "dist/battery_notifier.exe" "dist/$name"
           "name=$name" >> $env:GITHUB_OUTPUT
 
+      # Not zipped: the artifact is the exe itself, named after it
       - name: Upload executable
         uses: actions/upload-artifact@v7
         with:
-          name: windows-executable
           path: dist/${{ steps.rename.outputs.name }}
+          archive: false
           if-no-files-found: error

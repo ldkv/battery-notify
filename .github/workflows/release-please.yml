@@ -81,22 +81,12 @@ jobs:
       TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Download Python Windows executable
+      # The Python exe and the Rust zips: artifacts named after their file, not the screenshots
+      - name: Download executables
         uses: actions/download-artifact@v8
         with:
-          name: windows-executable
-          path: dist
-
-      - name: Download Rust Windows executable
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-windows-executable
-          path: dist
-
-      - name: Download Rust macOS app
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-macos-app
+          pattern: battery_notifier_*
+          merge-multiple: true
           path: dist
 
       # The app's updater only installs a zip signed for its file name: see rust/README.md

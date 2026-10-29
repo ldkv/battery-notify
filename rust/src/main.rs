@@ -1,6 +1,7 @@
 // No console window for the release build on Windows
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::path::Path;
 use std::process::ExitCode;
 use std::thread::sleep;
 use std::time::Duration;
@@ -11,7 +12,7 @@ use battery_notifier::core::settings::Settings;
 use battery_notifier::logs::configure_logging;
 use battery_notifier::platforms::{Platform, current_platform};
 use battery_notifier::ui::{settings_dialog, tray};
-use battery_notifier::updater::AFTER_UPDATE_FLAG;
+use battery_notifier::updater::{self, AFTER_UPDATE_FLAG};
 
 /// After an update, the previous version may still be exiting and holding the single-instance lock.
 const AFTER_UPDATE_LOCK_ATTEMPTS: u32 = 40;
@@ -26,7 +27,8 @@ Commands:
             --close-with-tray: close when stdin closes, the tray app holds the other end
   --once    print the battery levels once and exit
 
-Started by the updater with --after-update: the tray app, waiting for the previous version to exit.";
+Started by the updater with --after-update [<previous exe>]: the tray app, waiting for the previous
+version to exit, then deleting its exe.";
 
 fn main() -> ExitCode {
     let command = std::env::args().nth(1);
@@ -49,6 +51,9 @@ fn main() -> ExitCode {
             if !acquired {
                 tracing::info!("Already running, exiting");
                 return ExitCode::SUCCESS;
+            }
+            if let Some(previous) = std::env::args_os().nth(2) {
+                updater::remove_previous_version(Path::new(&previous));
             }
             tray::run(platform)
         }

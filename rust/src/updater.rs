@@ -5,6 +5,8 @@
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 use serde::Deserialize;
 use zipsign_api::{PUBLIC_KEY_LENGTH, VerifyingKey};
@@ -18,6 +20,8 @@ pub const RELEASES_PAGE: &str = "https://github.com/ldkv/battery-notify/releases
 const PUBLIC_KEY: &[u8; PUBLIC_KEY_LENGTH] = include_bytes!("../updater-key.pub");
 /// Command line flag of the updated app: wait for the previous one to exit instead of quitting.
 pub const AFTER_UPDATE_FLAG: &str = "--after-update";
+const REMOVE_ATTEMPTS: u32 = 20;
+const REMOVE_RETRY_DELAY: Duration = Duration::from_millis(250);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AvailableUpdate {
@@ -114,13 +118,52 @@ pub fn install(update: &AvailableUpdate) -> io::Result<std::process::Command> {
     Ok(command)
 }
 
+/// Put the new exe next to the running one under its own, versioned name: a running exe can be neither
+/// overwritten nor deleted, so the new version deletes this one once it has exited.
 #[cfg(windows)]
 fn replace_app(extracted: &Path) -> io::Result<std::process::Command> {
-    let new_exe = extracted.join("battery-notifier.exe");
-    self_replace::self_replace(&new_exe)?;
-    let mut command = std::process::Command::new(std::env::current_exe()?);
-    command.arg(AFTER_UPDATE_FLAG);
+    let new_exe = single_exe(extracted)?;
+    let current = std::env::current_exe()?;
+    let installed = current.with_file_name(new_exe.file_name().unwrap_or_default());
+    fs::copy(&new_exe, &installed)?;
+    let mut command = std::process::Command::new(&installed);
+    command.arg(AFTER_UPDATE_FLAG).arg(&current);
     Ok(command)
+}
+
+/// The one `.exe` the Windows zip contains, whatever its name.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn single_exe(dir: &Path) -> io::Result<PathBuf> {
+    let mut exes = fs::read_dir(dir)?
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.extension().is_some_and(|extension| extension.eq_ignore_ascii_case("exe")));
+    match (exes.next(), exes.next()) {
+        (Some(exe), None) => Ok(exe),
+        _ => Err(io::Error::new(io::ErrorKind::InvalidData, "the update must contain exactly one executable")),
+    }
+}
+
+/// Delete the previous version's exe, passed after `--after-update` on Windows. It may still be exiting.
+pub fn remove_previous_version(previous: &Path) {
+    if std::env::current_exe().is_ok_and(|exe| exe == previous) {
+        return;
+    }
+    for attempt in 0..REMOVE_ATTEMPTS {
+        if attempt > 0 {
+            thread::sleep(REMOVE_RETRY_DELAY);
+        }
+        match fs::remove_file(previous) {
+            Ok(()) => {
+                tracing::info!("Deleted the previous version {}", previous.display());
+                return;
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return,
+            Err(e) if attempt + 1 == REMOVE_ATTEMPTS => {
+                tracing::warn!("Could not delete the previous version {}: {e}", previous.display());
+            }
+            Err(_) => {}
+        }
+    }
 }
 
 #[cfg(target_os = "macos")]
@@ -195,7 +238,7 @@ mod tests {
     #[test]
     fn finds_this_platform_zip_of_a_newer_release() {
         let Some(name) = asset_name("9.0.0") else { return }; // no updates on this OS
-        let found = find_update(release("v9.0.0", &["battery_notifier-9.0.0-windows-x64.exe", &name]), "0.4.0");
+        let found = find_update(release("v9.0.0", &["battery_notifier_python-9.0.0-windows-x64.exe", &name]), "0.4.0");
         assert_eq!(found.map(|update| update.asset_name), Some(name));
         assert_eq!(find_update(release("v0.4.0", &[]), "0.4.0"), None);
         assert_eq!(find_update(release("v9.0.0", &["SHA256SUMS.txt"]), "0.4.0"), None);
@@ -204,7 +247,7 @@ mod tests {
     fn signed_zip(dir: &Path, name: &str, key: &SigningKey, context: &str) -> PathBuf {
         let mut plain = Cursor::new(Vec::new());
         let mut writer = zip::ZipWriter::new(&mut plain);
-        writer.start_file("battery-notifier.exe", zip::write::SimpleFileOptions::default()).unwrap();
+        writer.start_file("battery_notifier_rust-9.0.0.exe", zip::write::SimpleFileOptions::default()).unwrap();
         writer.write_all(b"new version").unwrap();
         writer.finish().unwrap();
         plain.set_position(0);
@@ -227,7 +270,8 @@ mod tests {
         // The signature is a prefix that zip readers skip, as the updater does once verified
         let mut archive = zip::ZipArchive::new(File::open(&zip).unwrap()).unwrap();
         let mut content = String::new();
-        io::Read::read_to_string(&mut archive.by_name("battery-notifier.exe").unwrap(), &mut content).unwrap();
+        io::Read::read_to_string(&mut archive.by_name("battery_notifier_rust-9.0.0.exe").unwrap(), &mut content)
+            .unwrap();
         assert_eq!(content, "new version");
         assert!(verify(&zip, name, &[other.verifying_key()]).is_err());
         assert!(verify(&zip, "battery_notifier_rust-9.0.0-macos.zip", &[key.verifying_key()]).is_err());
@@ -235,6 +279,27 @@ mod tests {
         let unsigned = dir.path().join("unsigned.zip");
         fs::write(&unsigned, b"PK\x05\x06").unwrap();
         assert!(verify(&unsigned, name, &[key.verifying_key()]).is_err());
+    }
+
+    #[test]
+    fn single_exe_of_the_update() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(single_exe(dir.path()).is_err());
+        fs::write(dir.path().join("README.txt"), "").unwrap();
+        fs::write(dir.path().join("battery_notifier_rust-9.0.0.exe"), "").unwrap();
+        assert_eq!(single_exe(dir.path()).unwrap(), dir.path().join("battery_notifier_rust-9.0.0.exe"));
+        fs::write(dir.path().join("other.EXE"), "").unwrap();
+        assert!(single_exe(dir.path()).is_err());
+    }
+
+    #[test]
+    fn removes_the_previous_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let previous = dir.path().join("battery_notifier_rust-0.5.1.exe");
+        fs::write(&previous, "old version").unwrap();
+        remove_previous_version(&previous);
+        assert!(!previous.exists());
+        remove_previous_version(&previous); // already gone
     }
 
     #[test]
