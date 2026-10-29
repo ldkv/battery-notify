@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use windows::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError};
 use windows::Win32::System::Console::{ATTACH_PARENT_PROCESS, AttachConsole};
 use windows::Win32::System::Threading::CreateMutexW;
 use windows::core::HSTRING;
@@ -48,12 +48,17 @@ impl Platform for WindowsPlatform {
 
     #[allow(unsafe_code)]
     fn acquire_single_instance(&self, name: &str) -> bool {
-        // SAFETY: plain Win32 calls. The mutex handle is never closed, so it is held for the lifetime of the process.
+        // SAFETY: plain Win32 calls. The acquired mutex handle is never closed, so it is held for the lifetime of the process.
         unsafe {
-            let Ok(_handle) = CreateMutexW(None, false, &HSTRING::from(format!(r"Local\{name}"))) else {
+            let Ok(handle) = CreateMutexW(None, false, &HSTRING::from(format!(r"Local\{name}"))) else {
                 return true; // can't tell, don't block the app
             };
-            GetLastError() != ERROR_ALREADY_EXISTS
+            if GetLastError() == ERROR_ALREADY_EXISTS {
+                // Our handle would keep the mutex alive after its owner exits, and every later attempt would fail
+                let _ = CloseHandle(handle);
+                return false;
+            }
+            true
         }
     }
 
