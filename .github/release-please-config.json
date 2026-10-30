@@ -39,13 +39,13 @@
       "release-type": "python",
       "component": "python",
       "exclude-paths": ["rust", ".github"],
-      "pull-request-title-pattern": "chore${scope}: release python ${version}"
+      "pull-request-title-pattern": "chore(python): release version ${version}"
     },
     "rust": {
       "release-type": "rust",
       "component": "rust",
       "include-component-in-tag": false,
-      "pull-request-title-pattern": "chore${scope}: release rust ${version}"
+      "pull-request-title-pattern": "chore(rust): release version ${version}"
     }
   }
 }
