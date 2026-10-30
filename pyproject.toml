@@ -13,7 +13,7 @@ classifiers = [
 dependencies = [
     "hidapi==0.15.0",
     "pillow==13.0.0",
-    "platformdirs==4.13.5",
+    "platformdirs==4.13.6",
     "pystray==0.19.5",
     "sv-ttk==2.6.1",
     "tomli-w==1.2.0",
