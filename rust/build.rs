@@ -1,5 +1,5 @@
 //! Embed the app icon in the Windows executable, shown by Explorer and the taskbar.
-//! winresource is a Windows-only build dependency: Windows executables are built on Windows.
+//! winresource is a Windows-only build dep: Windows executables are built on Windows.
 
 fn main() {
     println!("cargo::rerun-if-changed=../src/battery_notifier/assets/app-icon.ico");
