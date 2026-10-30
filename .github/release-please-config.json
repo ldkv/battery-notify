@@ -1,20 +1,51 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "python",
+  "separate-pull-requests": true,
+  "bootstrap-sha": "8a53a6aca4e2deca96b38e2b1f497b1603e805f5",
   "skip-changelog": true,
-  "include-component-in-tag": true,
   "changelog-sections": [
-    { "type": "feat", "section": "✨ Features" },
-    { "type": "fix", "section": "🐛 Bug Fixes" },
-    { "type": "perf", "section": "⚡ Performance" },
-    { "type": "refactor", "section": "♻️ Refactoring" },
-    { "type": "docs", "section": "📝 Documentation" },
-    { "type": "chore", "section": "🧹 Chores" },
-    { "type": "test", "section": "✅ Tests", "hidden": true }
+    {
+      "type": "feat",
+      "section": "✨ Features"
+    },
+    {
+      "type": "fix",
+      "section": "🐛 Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "⚡ Performance"
+    },
+    {
+      "type": "refactor",
+      "section": "♻️ Refactoring"
+    },
+    {
+      "type": "docs",
+      "section": "📝 Documentation"
+    },
+    {
+      "type": "chore",
+      "section": "🧹 Chores"
+    },
+    {
+      "type": "test",
+      "section": "✅ Tests",
+      "hidden": true
+    }
   ],
   "packages": {
     ".": {
-      "extra-files": [{ "type": "toml", "path": "rust/Cargo.toml", "jsonpath": "$.package.version" }]
+      "release-type": "python",
+      "component": "python",
+      "exclude-paths": ["rust", ".github"],
+      "pull-request-title-pattern": "chore(python): release version ${version}"
+    },
+    "rust": {
+      "release-type": "rust",
+      "component": "rust",
+      "include-component-in-tag": false,
+      "pull-request-title-pattern": "chore(rust): release version ${version}"
     }
   }
 }
