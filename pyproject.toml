@@ -28,7 +28,7 @@ battery-notifier = "battery_notifier.main:main"
 
 [dependency-groups]
 dev = [
-    "nuitka==4.3.1",
+    "nuitka==4.3.3",
     "pyrefly==1.4.0",
     "pytest==9.1.1",
     "ruff==0.17.3",
