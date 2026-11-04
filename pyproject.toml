@@ -17,7 +17,7 @@ dependencies = [
     "pystray==0.19.5",
     "sv-ttk==2.6.1",
     "tomli-w==1.2.0",
-    "winrt-runtime==4.0.3; sys_platform == 'win32'",
+    "winrt-runtime==4.1.0; sys_platform == 'win32'",
     "winrt-windows-devices-enumeration==v4!10.0.28000.2705; sys_platform == 'win32'",
     "winrt-windows-foundation==v4!10.0.28000.2705; sys_platform == 'win32'",
     "winrt-windows-foundation-collections==v4!10.0.28000.2705; sys_platform == 'win32'",
