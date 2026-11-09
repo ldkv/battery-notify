@@ -3,7 +3,7 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 use crate::core::paths::log_dir;
 
-/// Separate from the Python version's `battery_notifier.log`, in the same folder.
+/// Same prefix as the release files, `battery_notifier_rust-<version>-<platform>.zip`.
 const LOG_FILE_PREFIX: &str = "battery_notifier_rust";
 const MAX_LOG_FILES: usize = 7;
 

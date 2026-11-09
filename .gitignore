@@ -1,11 +1,5 @@
-# Byte-compiled / optimized / DLL files
-**/.*_cache/
-.cache
-
-# Distribution / packaging
-build/
-dist/
-docs/_build/
+# Build output
+/target/
 
 # Personal files
 .vscode/
@@ -15,6 +9,3 @@ docs/_build/
 .envrc
 *.log
 screenshots/
-
-# Rust
-rust/target/

@@ -1,4 +1,4 @@
-//! User settings, stored as TOML in the same file as the Python version.
+//! User settings, stored as TOML in `config.toml`.
 //! `FIELDS` describes each setting with its label and limits: the settings dialog is generated from it.
 
 use std::collections::{BTreeMap, BTreeSet};

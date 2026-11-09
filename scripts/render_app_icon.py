@@ -1,7 +1,6 @@
 """
-Render the app icon from src/battery_notifier/assets/app-icon.svg into the files beside it:
-a 256 px PNG (loaded by the Python dialog, embedded in the Rust binary), the Windows .ico and the macOS .icns.
-They live in the Python package, which must contain the PNG at runtime.
+Render the app icon from assets/app-icon.svg into the files beside it:
+a 256 px PNG (embedded in the binary), the Windows .ico and the macOS .icns.
 
     uvx --from cairosvg --with pillow python scripts/render_app_icon.py
 """
@@ -13,7 +12,7 @@ import cairosvg
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "src/battery_notifier/assets"
+ASSETS = ROOT / "assets"
 SOURCE = ASSETS / "app-icon.svg"
 ICO_SIZES = [16, 20, 24, 32, 40, 48, 64, 128, 256]
 PNG = ASSETS / "app-icon.png"

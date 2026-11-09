@@ -2,13 +2,13 @@ version: 2
 
 updates:
   - package-ecosystem: "cargo"
-    directory: "/rust"
+    directory: "/"
     schedule:
       interval: "daily"
     cooldown:
       default-days: 3
     ignore:
-      # Must match the version `windows` depends on (see rust/Cargo.toml).
+      # Must match the version `windows` depends on (see Cargo.toml).
       - dependency-name: "windows-collections"
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]

@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to (re)build and attach the executables to: v0.6.0 for Rust, python-v0.6.0 for Python"
+        description: "Existing release tag to (re)build and attach the executables to, e.g. v0.6.0"
         type: string
         required: true
 
@@ -16,16 +16,13 @@ permissions:
   pull-requests: write
 
 jobs:
-  # Python is the root package (tags python-v<version>), Rust the rust/ one (tags v<version>, which the
-  # Rust updater of 0.5.x and later looks for): each has its own version and release pull request.
+  # Tags v<version>, which the updater of 0.5.x and later looks for
   release-please:
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     outputs:
-      python_release_created: ${{ steps.release.outputs.release_created }}
-      python_tag_name: ${{ steps.release.outputs.tag_name }}
-      rust_release_created: ${{ steps.release.outputs['rust--release_created'] }}
-      rust_tag_name: ${{ steps.release.outputs['rust--tag_name'] }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
       prs: ${{ steps.release.outputs.prs_created == 'true' && steps.release.outputs.prs || '[]' }}
     steps:
       - name: Run release-please
@@ -35,8 +32,8 @@ jobs:
           config-file: .github/release-please-config.json
           manifest-file: .github/release-please-manifest.json
 
-  # release-please bumps pyproject.toml and rust/Cargo.toml, not uv.lock
-  sync-lock-files:
+  # release-please bumps Cargo.toml, not Cargo.lock
+  sync-lock-file:
     needs: release-please
     if: ${{ needs.release-please.outputs.prs != '[]' }}
     runs-on: ubuntu-latest
@@ -49,99 +46,38 @@ jobs:
         with:
           ref: ${{ matrix.pr.headBranchName }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.3
-
-      - name: Sync lock files with bumped version
+      - name: Sync lock file with bumped version
         run: |
-          uv lock
-          (cd rust && cargo update --workspace)
-          if ! git diff --quiet -- uv.lock rust/Cargo.lock; then
+          cargo update --workspace
+          if ! git diff --quiet -- Cargo.lock; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add uv.lock rust/Cargo.lock
-            git commit -m "chore: sync lock files"
+            git add Cargo.lock
+            git commit -m "chore: sync lock file"
             git push
           fi
 
   # Run after release-please creates a release, or manually for an existing tag
-  build-python:
+  build:
     needs: release-please
-    if: ${{ !cancelled() && (needs.release-please.outputs.python_release_created == 'true' || startsWith(inputs.tag, 'python-v')) }}
-    uses: ./.github/workflows/python-build-windows.yml
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || startsWith(inputs.tag, 'v')) }}
+    uses: ./.github/workflows/build.yml
     with:
-      ref: ${{ inputs.tag || needs.release-please.outputs.python_tag_name }}
+      ref: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
 
-  build-rust:
-    needs: release-please
-    if: ${{ !cancelled() && (needs.release-please.outputs.rust_release_created == 'true' || startsWith(inputs.tag, 'v')) }}
-    uses: ./.github/workflows/rust-build.yml
-    with:
-      ref: ${{ inputs.tag || needs.release-please.outputs.rust_tag_name }}
-
-  publish-python:
-    needs: [release-please, build-python]
-    if: ${{ !cancelled() && needs.build-python.result == 'success' }}
+  publish:
+    needs: [release-please, build]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
       attestations: write
     env:
-      TAG: ${{ inputs.tag || needs.release-please.outputs.python_tag_name }}
+      TAG: ${{ inputs.tag || needs.release-please.outputs.tag_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      # The new Python release became the latest; the Rust updater asks GitHub for the latest release
-      - name: Keep the latest Rust release as latest
-        run: |
-          rust_tag=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases \
-            --json tagName --jq '[.[] | select(.tagName | startswith("v"))][0].tagName')
-          if [ -n "$rust_tag" ]; then
-            gh release edit "$rust_tag" --latest --repo "$GITHUB_REPOSITORY"
-          fi
-
-      # Not zipped: the artifact is the exe itself, in a folder named after it
-      - name: Download executable
-        uses: actions/download-artifact@v8
-        with:
-          pattern: battery_notifier_python-*
-          skip-decompress: true
-          path: artifacts
-
-      - name: Collect executable
-        run: |
-          mkdir dist
-          for dir in artifacts/*/; do
-            name=$(basename "$dir")
-            mv "$dir"* "dist/$name"
-          done
-          ls -l dist
-
-      - name: Generate checksums
-        working-directory: dist
-        run: sha256sum *.exe > SHA256SUMS.txt
-
-      - name: Attest build provenance
-        uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: dist/*.exe
-
-      - name: Upload release assets
-        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
-
-  publish-rust:
-    needs: [release-please, build-rust]
-    if: ${{ !cancelled() && needs.build-rust.result == 'success' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    env:
-      TAG: ${{ inputs.tag || needs.release-please.outputs.rust_tag_name }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      # The Rust zips: artifacts named after their file, not the screenshots.
+      # The zips: artifacts named after their file, not the screenshots.
       # skip-decompress keeps the zips as they are; each lands in a folder named after the
       # artifact, so the file keeps its name whatever name the download gives it.
       - name: Download executables
@@ -160,16 +96,16 @@ jobs:
           done
           ls -l dist
 
-      # The app's updater only installs a zip signed for its file name: see rust/README.md
+      # The app's updater only installs a zip signed for its file name: see README.md
       - name: Checkout public signing key
         uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
-          sparse-checkout: rust/updater-key.pub
+          sparse-checkout: updater-key.pub
           sparse-checkout-cone-mode: false
           path: repo
 
-      - name: Sign the Rust zips
+      - name: Sign the zips
         working-directory: dist
         env:
           ZIPSIGN_PRIVATE_KEY: ${{ secrets.ZIPSIGN_PRIVATE_KEY }}
@@ -179,7 +115,7 @@ jobs:
           echo "$ZIPSIGN_PRIVATE_KEY" | base64 -d > "$key"
           for zip in battery_notifier_rust-*.zip; do
             zipsign sign zip "$zip" "$key"
-            zipsign verify zip "$zip" ../repo/rust/updater-key.pub
+            zipsign verify zip "$zip" ../repo/updater-key.pub
           done
           rm "$key"
 
