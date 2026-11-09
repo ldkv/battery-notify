@@ -37,7 +37,8 @@
   "packages": {
     ".": {
       "release-type": "rust",
-      "include-component-in-tag": false
+      "include-component-in-tag": false,
+      "pull-request-title-pattern": "chore: release ${version}"
     }
   }
 }

@@ -162,8 +162,8 @@ impl eframe::App for SettingsDialog {
                 ui.add(egui::Label::new(RichText::new(status).color(colors.0)).wrap_mode(egui::TextWrapMode::Extend));
                 ui.add_space(ROW_GAP);
                 ui.horizontal(|ui| {
-                    if ui.link(RichText::new("Open logs folder").color(colors.1)).clicked() {
-                        self.platform.open_folder(&log_dir());
+                    if ui.link(RichText::new("Open settings folder").color(colors.1)).clicked() {
+                        self.platform.open_folder(&config_dir());
                     }
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("Cancel").clicked() {

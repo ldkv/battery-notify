@@ -189,7 +189,6 @@ fn build_menu(state: &MenuState) -> Menu {
         .and_then(|()| menu.append(&PredefinedMenuItem::separator()))
         .and_then(|()| menu.append(&MenuItem::with_id(REFRESH_ID, "Refresh", true, None)))
         .and_then(|()| menu.append(&MenuItem::with_id(SETTINGS_ID, "Settings…", true, None)))
-        .and_then(|()| menu.append(&MenuItem::with_id(OPEN_FOLDER_ID, "Open settings folder", true, None)))
         .and_then(|()| menu.append(&PredefinedMenuItem::separator()))
         .and_then(|()| update.as_ref().map_or(Ok(()), |item| menu.append(item)))
         .and_then(|()| menu.append(&MenuItem::new(format!("Battery Notifier v{VERSION}"), false, None)))
