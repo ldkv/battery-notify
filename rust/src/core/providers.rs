@@ -56,26 +56,35 @@ impl HidProvider {
         self.api.as_mut()
     }
 
-    fn find(&mut self, device_type: &DeviceType) -> Option<&FoundDevice> {
-        if !self.devices.contains_key(device_type.name) {
-            let api = self.api()?;
-            let searched = api.reset_devices().and_then(|()| api.add_devices(device_type.vid, device_type.pid));
-            if let Err(e) = searched {
-                tracing::info!("Error searching {}: {e}", device_type.name);
-                return None;
-            }
-            let Some((path, is_usb)) = api
-                .device_list()
-                .find(|info| device_type.filter.matches(info.usage_page(), info.usage(), info.interface_number()))
-                .map(|info| (info.path().to_owned(), matches!(info.bus_type(), BusType::Usb)))
-            else {
-                tracing::info!("Device not found: {}", device_type.name);
-                return None;
-            };
-            tracing::info!("Device found for {}: {path:?}", device_type.name);
-            self.devices.insert(device_type.name, FoundDevice { path, driver: (device_type.driver)(is_usb) });
+    /// Every HID collection matching the device type, each with its own driver. Empty when none is found.
+    fn candidates(&mut self, device_type: &DeviceType) -> Vec<FoundDevice> {
+        let Some(api) = self.api() else { return Vec::new() };
+        let searched = api.reset_devices().and_then(|()| api.add_devices(device_type.vid, device_type.pid));
+        if let Err(e) = searched {
+            tracing::info!("Error searching {}: {e}", device_type.name);
+            return Vec::new();
         }
-        self.devices.get(device_type.name)
+        api.device_list()
+            .filter(|info| device_type.filter.matches(info.usage_page(), info.usage(), info.interface_number()))
+            .map(|info| FoundDevice {
+                path: info.path().to_owned(),
+                driver: (device_type.driver)(matches!(info.bus_type(), BusType::Usb)),
+            })
+            .collect()
+    }
+
+    /// Open the device and read its level, None when it does not answer.
+    fn read_level(&self, device_type: &DeviceType, device: &FoundDevice) -> Option<u8> {
+        let api = self.api.as_ref()?;
+        let level = match api.open_path(&device.path) {
+            Ok(hid_device) => device.driver.battery_level(&hid_device),
+            Err(e) => {
+                tracing::warn!("Error opening {}: {e}", device_type.name);
+                None
+            }
+        };
+        tracing::info!("{} - Battery level: {level:?} / {:?}", device_type.name, device.path);
+        level
     }
 
     /// None when the device is not found.
@@ -84,8 +93,11 @@ impl HidProvider {
             self,
             |provider| provider.level(device_type),
             |provider| {
-                tracing::info!("No answer from {}, searching it again", device_type.name);
-                provider.devices.remove(device_type.name);
+                let forgotten = provider.devices.remove(device_type.name).is_some();
+                if forgotten {
+                    tracing::info!("No answer from {}, searching it again", device_type.name);
+                }
+                forgotten
             },
         );
         match lookup {
@@ -94,21 +106,21 @@ impl HidProvider {
         }
     }
 
+    /// Read the stored device, or search one when none is stored.
     fn level(&mut self, device_type: &DeviceType) -> Lookup {
-        if self.find(device_type).is_none() {
-            return Lookup::NotFound;
+        if let Some(device) = self.devices.get(device_type.name) {
+            return Lookup::Found(self.read_level(device_type, device));
         }
-        let Some(api) = self.api.as_ref() else { return Lookup::NotFound };
-        let device = &self.devices[device_type.name];
-        let level = match api.open_path(&device.path) {
-            Ok(hid_device) => device.driver.battery_level(&hid_device),
-            Err(e) => {
-                tracing::warn!("Error opening {}: {e}", device_type.name);
-                None
-            }
-        };
-        tracing::info!("{} - Battery level: {level:?}", device_type.name);
-        Lookup::Found(level)
+        let candidates = self.candidates(device_type);
+        if candidates.is_empty() {
+            tracing::info!("Device not found: {}", device_type.name);
+        }
+        let (lookup, answering) = first_answering(candidates, |device| self.read_level(device_type, device));
+        if let Some(device) = answering {
+            tracing::info!("Device found for {}: {:?}", device_type.name, device.path);
+            self.devices.insert(device_type.name, device);
+        }
+        lookup
     }
 }
 
@@ -129,16 +141,28 @@ enum Lookup {
     Found(Option<u8>),
 }
 
-/// Read with `read`. A device that does not answer is forgotten and searched again: it may have come
+/// Read with `read`. A stored device that does not answer is forgotten and searched again: it may have come
 /// back under a new path, e.g. after the computer slept, and the stored one would keep failing.
-fn read_searching_again<S>(state: &mut S, read: impl Fn(&mut S) -> Lookup, forget: impl Fn(&mut S)) -> Lookup {
+/// `forget` returns whether a device was stored: a search that just found no answering device is not repeated.
+fn read_searching_again<S>(state: &mut S, read: impl Fn(&mut S) -> Lookup, forget: impl Fn(&mut S) -> bool) -> Lookup {
     match read(state) {
-        Lookup::Found(None) => {
-            forget(state);
-            read(state)
-        }
+        Lookup::Found(None) if forget(state) => read(state),
         lookup => lookup,
     }
+}
+
+/// Read each candidate in turn and return the first that answers, with its level. Several HID collections can
+/// match a device type, e.g. two receivers with the same VID/PID, only one of them paired with the device.
+fn first_answering<C>(candidates: Vec<C>, read: impl Fn(&C) -> Option<u8>) -> (Lookup, Option<C>) {
+    if candidates.is_empty() {
+        return (Lookup::NotFound, None);
+    }
+    for candidate in candidates {
+        if let Some(level) = read(&candidate) {
+            return (Lookup::Found(Some(level)), Some(candidate));
+        }
+    }
+    (Lookup::Found(None), None)
 }
 
 /// Devices whose battery level the OS already knows, e.g. paired Bluetooth devices.
@@ -181,29 +205,32 @@ mod tests {
         assert!(provider.api.is_none(), "hidapi was initialized");
     }
 
-    /// A device found under a stored path that answers in turn `answers`, until forgotten and searched again.
+    /// Searches finding in turn an answering device, whose stored path then answers the rest of `answers`,
+    /// a device that does not answer (`[None]`, not stored), or nothing (None).
     struct Searches {
-        found: Vec<Vec<Option<u8>>>, // what each search finds, in turn: None when not found
-        current: Option<std::vec::IntoIter<Option<u8>>>,
+        found: Vec<Vec<Option<u8>>>,
+        stored: Option<std::vec::IntoIter<Option<u8>>>,
     }
 
     impl Searches {
         fn new(found: Vec<Option<Vec<Option<u8>>>>) -> Self {
-            Self { found: found.into_iter().map(Option::unwrap_or_default).rev().collect(), current: None }
+            Self { found: found.into_iter().map(Option::unwrap_or_default).rev().collect(), stored: None }
         }
 
         fn read(&mut self) -> Lookup {
-            if self.current.is_none() {
-                match self.found.pop() {
-                    Some(answers) if !answers.is_empty() => self.current = Some(answers.into_iter()),
-                    _ => return Lookup::NotFound,
-                }
+            if let Some(stored) = self.stored.as_mut() {
+                return Lookup::Found(stored.next().flatten());
             }
-            Lookup::Found(self.current.as_mut().and_then(Iterator::next).flatten())
+            let mut answers = self.found.pop().unwrap_or_default().into_iter();
+            let Some(level) = answers.next() else { return Lookup::NotFound };
+            if level.is_some() {
+                self.stored = Some(answers);
+            }
+            Lookup::Found(level)
         }
 
-        fn forget(&mut self) {
-            self.current = None;
+        fn forget(&mut self) -> bool {
+            self.stored.take().is_some()
         }
     }
 
@@ -228,9 +255,36 @@ mod tests {
 
     #[test]
     fn found_device_that_does_not_answer_has_no_level() {
-        // E.g. a receiver whose keyboard is asleep: found again, still without a level
-        let mut searches = Searches::new(vec![Some(vec![None]), Some(vec![None])]);
+        // E.g. a receiver whose keyboard is asleep: not searched twice in one read, searched again on the next
+        let mut searches = Searches::new(vec![Some(vec![None]), Some(vec![Some(42)])]);
         assert_eq!(read(&mut searches), Lookup::Found(None));
+        assert_eq!(read(&mut searches), Lookup::Found(Some(42)));
+    }
+
+    /// Candidates are named by their level, and record which ones were read.
+    fn first_answering_of(levels: &[Option<u8>]) -> (Lookup, Option<usize>, Vec<usize>) {
+        let read = std::cell::RefCell::new(Vec::new());
+        let (lookup, answering) = first_answering((0..levels.len()).collect(), |index| {
+            read.borrow_mut().push(*index);
+            levels[*index]
+        });
+        (lookup, answering, read.into_inner())
+    }
+
+    #[test]
+    fn first_answering_skips_collections_that_do_not_answer() {
+        // E.g. two receivers with the same VID/PID, the device paired with the second one
+        assert_eq!(first_answering_of(&[None, Some(80), Some(42)]), (Lookup::Found(Some(80)), Some(1), vec![0, 1]));
+    }
+
+    #[test]
+    fn first_answering_without_answer_keeps_nothing() {
+        assert_eq!(first_answering_of(&[None, None]), (Lookup::Found(None), None, vec![0, 1]));
+    }
+
+    #[test]
+    fn first_answering_without_candidate_is_not_found() {
+        assert_eq!(first_answering_of(&[]), (Lookup::NotFound, None, vec![]));
     }
 
     #[test]

@@ -29,7 +29,7 @@ class BatteryProvider(Protocol):
 class HIDProvider:
     """
     Devices are looked up once found, and searched again on each read until then.
-    A found device that does not answer is searched again right away: it may have come back under
+    A stored device that does not answer is searched again right away: it may have come back under
     a new path, e.g. after the computer slept, and the stored one would keep failing.
     """
 
@@ -46,27 +46,42 @@ class HIDProvider:
             if not settings.is_enabled(device_class.name):
                 continue
             level = self._level(device_class)
-            if level == DEFAULT_BATTERY_LEVEL:
-                logger.info(f"No answer from {device_class.name}, searching it again")
-                self._devices.pop(device_class.name, None)
-                level = self._level(device_class)
             if level is not None:
                 readings.append(BatteryReading(device_class.name, None if level == DEFAULT_BATTERY_LEVEL else level))
         return readings
 
     def _level(self, device_class: type[BaseDevice]) -> int | None:
         """None when the device is not found."""
-        device = self._find(device_class)
-        return None if device is None else int(device.update_battery_level())
+        device = self._devices.get(device_class.name)
+        if device is not None:
+            level = int(device.update_battery_level())
+            if level != DEFAULT_BATTERY_LEVEL:
+                return level
+            logger.info(f"No answer from {device_class.name}, searching it again")
+            del self._devices[device_class.name]
+        return self._search(device_class)
 
-    def _find(self, device_class: type[BaseDevice]) -> BaseDevice | None:
-        if device_class.name not in self._devices:
-            try:
-                self._devices[device_class.name] = device_class()  # pyrefly: ignore[missing-argument]
-                logger.info(f"Initialized {device_class.name}")
-            except Exception as e:
-                logger.info(f"Error initializing {device_class.name}: {e}")
-        return self._devices.get(device_class.name)
+    def _search(self, device_class: type[BaseDevice]) -> int | None:
+        """
+        Keep the first matching device that answers: several HID collections can match a device type,
+        e.g. two receivers with the same VID/PID, only one of them paired with the device.
+        """
+        try:
+            devices = device_class.find_all()
+        except Exception as e:
+            logger.info(f"Error searching {device_class.name}: {e}")
+            return None
+        if not devices:
+            logger.info(f"Device not found: {device_class.name}")
+            return None
+
+        for device in devices:
+            level = int(device.update_battery_level())
+            if level != DEFAULT_BATTERY_LEVEL:
+                logger.info(f"Device found for {device_class.name}: {device.device_info.path}")
+                self._devices[device_class.name] = device
+                return level
+        return DEFAULT_BATTERY_LEVEL
 
 
 class OSProvider:

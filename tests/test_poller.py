@@ -2,6 +2,7 @@ import pytest
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.core import poller, providers
+from battery_notifier.core.devices.hid_wrapper import DeviceInfo
 from battery_notifier.core.poller import Poller, known_device_names, load_seen_devices
 from battery_notifier.core.providers import BatteryReading, HIDProvider, OSProvider
 from battery_notifier.core.settings import Settings
@@ -56,22 +57,24 @@ def test_os_provider_skips_disabled_devices():
 
 def test_hid_provider_does_not_open_disabled_devices(monkeypatch):
     provider = HIDProvider()
-    monkeypatch.setattr(provider, "_find", lambda device_class: pytest.fail(f"opened {device_class.name}"))
+    monkeypatch.setattr(provider, "_level", lambda device_class: pytest.fail(f"opened {device_class.name}"))
     assert provider.read(Settings(disabled_devices=frozenset(HIDProvider.device_names()))) == []
 
 
-def fake_device_class(levels_per_instance: list[list[int]]):
-    """A device type whose n-th instance, i.e. n-th search, answers the n-th list of levels in turn."""
-    instances = iter(levels_per_instance)
+def fake_device_class(searches: list[list[list[int]]]):
+    """A device type whose n-th search finds one device per list of levels, each answering its levels in turn."""
+    results = iter(searches)
 
     class FakeMouse:
         name = "Fake mouse"
+        device_info = DeviceInfo()
 
-        def __init__(self):
-            try:
-                self.levels = iter(next(instances))
-            except StopIteration:
-                raise LookupError("Device not found: Fake mouse") from None
+        def __init__(self, levels: list[int]):
+            self.levels = iter(levels)
+
+        @classmethod
+        def find_all(cls) -> list["FakeMouse"]:
+            return [cls(levels) for levels in next(results, [])]
 
         def update_battery_level(self) -> int:
             return next(self.levels)
@@ -81,22 +84,30 @@ def fake_device_class(levels_per_instance: list[list[int]]):
 
 def test_hid_provider_searches_again_a_device_that_stopped_answering(monkeypatch):
     """After the computer slept, the device comes back under a new path: the stored one fails."""
-    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[80, DEFAULT_BATTERY_LEVEL], [42]])])
+    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[[80, DEFAULT_BATTERY_LEVEL]], [[42]]])])
     provider = HIDProvider()
     assert provider.read(Settings()) == [BatteryReading("Fake mouse", 80)]
     assert provider.read(Settings()) == [BatteryReading("Fake mouse", 42)]
 
 
 def test_hid_provider_drops_a_device_no_longer_found(monkeypatch):
-    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[80, DEFAULT_BATTERY_LEVEL]])])
+    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[[80, DEFAULT_BATTERY_LEVEL]]])])
     provider = HIDProvider()
     assert provider.read(Settings()) == [BatteryReading("Fake mouse", 80)]
     assert provider.read(Settings()) == []
 
 
 def test_hid_provider_shows_a_found_device_that_does_not_answer(monkeypatch):
-    """E.g. a receiver whose keyboard is asleep: found again, still without a level."""
-    monkeypatch.setattr(
-        providers, "HID_DEVICES", [fake_device_class([[DEFAULT_BATTERY_LEVEL], [DEFAULT_BATTERY_LEVEL]])]
-    )
-    assert HIDProvider().read(Settings()) == [BatteryReading("Fake mouse", None)]
+    """E.g. a receiver whose keyboard is asleep: not searched twice in one read, searched again on the next."""
+    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[[DEFAULT_BATTERY_LEVEL]], [[42]]])])
+    provider = HIDProvider()
+    assert provider.read(Settings()) == [BatteryReading("Fake mouse", None)]
+    assert provider.read(Settings()) == [BatteryReading("Fake mouse", 42)]
+
+
+def test_hid_provider_keeps_the_matching_device_that_answers(monkeypatch):
+    """E.g. two receivers with the same VID/PID, the device paired with the second one."""
+    monkeypatch.setattr(providers, "HID_DEVICES", [fake_device_class([[[DEFAULT_BATTERY_LEVEL], [80, 70], [42]]])])
+    provider = HIDProvider()
+    assert provider.read(Settings()) == [BatteryReading("Fake mouse", 80)]
+    assert provider.read(Settings()) == [BatteryReading("Fake mouse", 70)]

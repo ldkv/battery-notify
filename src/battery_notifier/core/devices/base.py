@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass, field
+from typing import Self
 
 from battery_notifier.configs import DEFAULT_BATTERY_LEVEL
 from battery_notifier.core.devices.hid_wrapper import DeviceInfo, HIDWrapper
@@ -26,17 +27,29 @@ class BaseDevice:
         """Fetch current battery level of the device."""
 
     def __post_init__(self):
-        self.device_info = self.match_device_info()
+        if self.device_info.path is None:  # not found by find_all yet
+            self.device_info = self.match_device_info()
         self.battery_message = self.generate_battery_message()
         logger.info(f"Device found for {self.name}: {self.device_info=} / {self.battery_message=}")
 
     def match_device_info(self):
-        found_devices = HIDWrapper.enumerate_matching_devices(self.VID, self.PID, self.device_info)
-        for device in found_devices:
-            if self.device_info.matching_info(device):
-                return device
+        for device in self.matching_device_infos(self.VID, self.PID, self.device_info):
+            return device
 
         raise Exception(f"Device not found: {self.name}")
+
+    @staticmethod
+    def matching_device_infos(VID: int, PID: int, device_info: DeviceInfo) -> list[DeviceInfo]:
+        found_devices = HIDWrapper.enumerate_matching_devices(VID, PID, device_info)
+        return [device for device in found_devices if device_info.matching_info(device)]
+
+    @classmethod
+    def find_all(cls) -> list[Self]:
+        """One device per HID collection matching the type, e.g. one per receiver with the same VID/PID."""
+        return [
+            cls(device_info=device_info)  # pyrefly: ignore[missing-argument]
+            for device_info in cls.matching_device_infos(cls.VID, cls.PID, cls.device_info)
+        ]
 
     def update_battery_level(self) -> float:
         """Fetch and update current battery level of the device."""
