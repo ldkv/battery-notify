@@ -16,6 +16,7 @@ use crate::core::paths::state_dir;
 
 const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/ldkv/battery-notify/releases/latest";
 pub const RELEASES_PAGE: &str = "https://github.com/ldkv/battery-notify/releases/latest";
+pub const ALL_RELEASES_PAGE: &str = "https://github.com/ldkv/battery-notify/releases";
 /// Public half of the key the release workflow signs the zips with: see the README.
 const PUBLIC_KEY: &[u8; PUBLIC_KEY_LENGTH] = include_bytes!("../updater-key.pub");
 /// Command line flag of the updated app: wait for the previous one to exit instead of quitting.

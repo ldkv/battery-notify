@@ -17,7 +17,7 @@ use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider, OsPro
 use crate::core::settings::Settings;
 use crate::platforms::Platform;
 use crate::ui::icon::{IconImage, SIZE, icon_renderer};
-use crate::updater::{self, AvailableUpdate, RELEASES_PAGE};
+use crate::updater::{self, ALL_RELEASES_PAGE, AvailableUpdate, RELEASES_PAGE};
 
 const NO_DEVICE_TEXT: &str = "No device found yet";
 const REFRESH_ID: &str = "refresh";
@@ -25,6 +25,7 @@ const SETTINGS_ID: &str = "settings";
 const QUIT_ID: &str = "quit";
 const UPDATE_ID: &str = "update";
 const CHECK_UPDATE_ID: &str = "check_update";
+const VERSION_ID: &str = "version";
 const UPDATE_CHECK_INTERVAL: Duration = Duration::from_hours(24);
 
 enum UserEvent {
@@ -155,6 +156,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                     }
                 }
                 CHECK_UPDATE_ID => check_for_update(&mut menu, tray.as_ref(), proxy.clone()),
+                VERSION_ID => platform.open_url(ALL_RELEASES_PAGE),
                 QUIT_ID => *control_flow = ControlFlow::Exit,
                 _ => {}
             },
@@ -200,7 +202,7 @@ fn build_menu(state: &MenuState) -> Menu {
         .and_then(|()| menu.append(&MenuItem::with_id(SETTINGS_ID, "Settings…", true, None)))
         .and_then(|()| menu.append(&PredefinedMenuItem::separator()))
         .and_then(|()| update.as_ref().map_or(Ok(()), |item| menu.append(item)))
-        .and_then(|()| menu.append(&MenuItem::new(format!("Battery Notifier v{VERSION}"), false, None)))
+        .and_then(|()| menu.append(&MenuItem::with_id(VERSION_ID, format!("Battery Notifier v{VERSION}"), true, None)))
         .and_then(|()| menu.append(&MenuItem::with_id(QUIT_ID, "Quit", true, None)));
     if let Err(e) = appended {
         tracing::error!("Could not build the tray menu: {e}");
