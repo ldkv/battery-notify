@@ -24,6 +24,7 @@ const REFRESH_ID: &str = "refresh";
 const SETTINGS_ID: &str = "settings";
 const QUIT_ID: &str = "quit";
 const UPDATE_ID: &str = "update";
+const CHECK_UPDATE_ID: &str = "check_update";
 const UPDATE_CHECK_INTERVAL: Duration = Duration::from_hours(24);
 
 enum UserEvent {
@@ -31,6 +32,8 @@ enum UserEvent {
     Menu(MenuEvent),
     Tray(TrayIconEvent),
     UpdateAvailable(AvailableUpdate),
+    /// Result of a check asked from the menu.
+    UpdateChecked(Result<Option<AvailableUpdate>, String>),
     /// The new version is in place: start it with this command, then exit.
     UpdateInstalled(Command),
     UpdateFailed(String),
@@ -42,6 +45,7 @@ struct MenuState {
     readings: Vec<BatteryReading>,
     update: Option<AvailableUpdate>,
     updating: bool,
+    checking: bool,
 }
 
 type SharedSettings = Arc<Mutex<Settings>>;
@@ -108,6 +112,13 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                 menu.update = Some(update);
                 refresh_menu(tray.as_ref(), &menu);
             }
+            Event::UserEvent(UserEvent::UpdateChecked(result)) => {
+                menu.checking = false;
+                if let Some(update) = update_checked(platform.as_ref(), result) {
+                    menu.update = Some(update);
+                }
+                refresh_menu(tray.as_ref(), &menu);
+            }
             Event::UserEvent(UserEvent::UpdateInstalled(mut command)) => match command.spawn() {
                 Ok(_) => {
                     tracing::info!("Updated, starting the new version");
@@ -143,6 +154,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                         install_update(update, proxy.clone());
                     }
                 }
+                CHECK_UPDATE_ID => check_for_update(&mut menu, tray.as_ref(), proxy.clone()),
                 QUIT_ID => *control_flow = ControlFlow::Exit,
                 _ => {}
             },
@@ -173,13 +185,13 @@ fn build_menu(state: &MenuState) -> Menu {
     if state.readings.is_empty() {
         items.push(MenuItem::new(NO_DEVICE_TEXT, false, None));
     }
-    let update = state.update.as_ref().map(|update| {
-        if state.updating {
-            MenuItem::new(format!("Updating to {}…", update.version), false, None)
-        } else {
-            MenuItem::with_id(UPDATE_ID, format!("Update to {}", update.version), true, None)
-        }
-    });
+    let update = match &state.update {
+        Some(update) if state.updating => Some(MenuItem::new(format!("Updating to {}…", update.version), false, None)),
+        Some(update) => Some(MenuItem::with_id(UPDATE_ID, format!("Update to {}", update.version), true, None)),
+        None if state.checking => Some(MenuItem::new("Checking for updates…", false, None)),
+        None if can_update() => Some(MenuItem::with_id(CHECK_UPDATE_ID, "Check for updates", true, None)),
+        None => None,
+    };
     let appended = items
         .iter()
         .try_for_each(|item| menu.append(item))
@@ -298,14 +310,7 @@ fn update_loop(platform: &Arc<dyn Platform>, proxy: &EventLoopProxy<UserEvent>) 
         match updater::check() {
             Ok(Some(update)) => {
                 if notified.as_ref() != Some(&update.version) {
-                    tracing::info!("Update available: {}", update.version);
-                    platform.show_notification(
-                        "Update available",
-                        &format!(
-                            "Battery Notifier {} is available: choose Update in the menu to install it.",
-                            update.version
-                        ),
-                    );
+                    notify_update(platform.as_ref(), &update);
                     notified = Some(update.version.clone());
                 }
                 if proxy.send_event(UserEvent::UpdateAvailable(update)).is_err() {
@@ -316,6 +321,57 @@ fn update_loop(platform: &Arc<dyn Platform>, proxy: &EventLoopProxy<UserEvent>) 
             Err(e) => tracing::warn!("Could not check for updates: {e}"),
         }
         thread::sleep(UPDATE_CHECK_INTERVAL);
+    }
+}
+
+fn notify_update(platform: &dyn Platform, update: &AvailableUpdate) {
+    tracing::info!("Update available: {}", update.version);
+    platform.show_notification(
+        "Update available",
+        &format!("Battery Notifier {} is available: choose Update in the menu to install it.", update.version),
+    );
+}
+
+/// Tell the result of a check asked from the menu, and return the update it found.
+fn update_checked(platform: &dyn Platform, result: Result<Option<AvailableUpdate>, String>) -> Option<AvailableUpdate> {
+    match result {
+        Ok(Some(update)) => {
+            notify_update(platform, &update);
+            return Some(update);
+        }
+        Ok(None) => {
+            platform.show_notification(
+                "No update available",
+                &format!("Battery Notifier v{VERSION} is the latest version."),
+            );
+        }
+        Err(e) => {
+            tracing::warn!("Could not check for updates: {e}");
+            platform.show_notification("Update check failed", &format!("Could not check for updates: {e}"));
+        }
+    }
+    None
+}
+
+/// Development builds must not replace the built binary, and other OSes do not update themselves.
+fn can_update() -> bool {
+    cfg!(not(debug_assertions)) && updater::is_supported()
+}
+
+fn check_for_update(menu: &mut MenuState, tray: Option<&TrayIcon>, proxy: EventLoopProxy<UserEvent>) {
+    if menu.checking {
+        return;
+    }
+    menu.checking = true;
+    refresh_menu(tray, menu);
+    let spawned = thread::Builder::new().name("update_check_now".to_string()).spawn(move || {
+        let result = updater::check().map_err(|e| e.to_string());
+        let _ = proxy.send_event(UserEvent::UpdateChecked(result));
+    });
+    if let Err(e) = spawned {
+        tracing::error!("Could not check for updates: {e}");
+        menu.checking = false;
+        refresh_menu(tray, menu);
     }
 }
 

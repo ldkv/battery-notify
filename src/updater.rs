@@ -54,6 +54,11 @@ fn asset_name(version: &str) -> Option<String> {
     Some(format!("battery_notifier_rust-{version}-{platform}.zip"))
 }
 
+/// Whether the app can update itself on this OS.
+pub fn is_supported() -> bool {
+    asset_name(VERSION).is_some()
+}
+
 /// Whether `candidate` is a later `major.minor.patch` version than `current`.
 fn is_newer(candidate: &str, current: &str) -> bool {
     let parse = |version: &str| -> Option<Vec<u64>> { version.split('.').map(|part| part.parse().ok()).collect() };
@@ -79,7 +84,7 @@ fn agent() -> ureq::Agent {
 
 /// The latest release if it is newer than this app and has a zip for this platform.
 pub fn check() -> io::Result<Option<AvailableUpdate>> {
-    if asset_name(VERSION).is_none() {
+    if !is_supported() {
         return Ok(None);
     }
     let release: Release =
