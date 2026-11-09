@@ -89,27 +89,21 @@ impl HidProvider {
 
     /// None when the device is not found.
     fn reading(&mut self, device_type: &DeviceType) -> Option<BatteryReading> {
-        let lookup = read_searching_again(
-            self,
-            |provider| provider.level(device_type),
-            |provider| {
-                let forgotten = provider.devices.remove(device_type.name).is_some();
-                if forgotten {
-                    tracing::info!("No answer from {}, searching it again", device_type.name);
-                }
-                forgotten
-            },
-        );
-        match lookup {
+        match self.level(device_type) {
             Lookup::NotFound => None,
             Lookup::Found(level) => Some(BatteryReading { name: device_type.name.to_string(), level }),
         }
     }
 
-    /// Read the stored device, or search one when none is stored.
+    /// Read the stored device. One that does not answer is forgotten and searched again: it may have come back
+    /// under a new path, e.g. after the computer slept, and the stored one would keep failing.
     fn level(&mut self, device_type: &DeviceType) -> Lookup {
         if let Some(device) = self.devices.get(device_type.name) {
-            return Lookup::Found(self.read_level(device_type, device));
+            if let Some(level) = self.read_level(device_type, device) {
+                return Lookup::Found(Some(level));
+            }
+            tracing::info!("No answer from {}, searching it again", device_type.name);
+            self.devices.remove(device_type.name);
         }
         let candidates = self.candidates(device_type);
         if candidates.is_empty() {
@@ -139,16 +133,6 @@ enum Lookup {
     NotFound,
     /// The level is None when the device did not answer.
     Found(Option<u8>),
-}
-
-/// Read with `read`. A stored device that does not answer is forgotten and searched again: it may have come
-/// back under a new path, e.g. after the computer slept, and the stored one would keep failing.
-/// `forget` returns whether a device was stored: a search that just found no answering device is not repeated.
-fn read_searching_again<S>(state: &mut S, read: impl Fn(&mut S) -> Lookup, forget: impl Fn(&mut S) -> bool) -> Lookup {
-    match read(state) {
-        Lookup::Found(None) if forget(state) => read(state),
-        lookup => lookup,
-    }
 }
 
 /// Read each candidate in turn and return the first that answers, with its level. Several HID collections can
@@ -205,85 +189,21 @@ mod tests {
         assert!(provider.api.is_none(), "hidapi was initialized");
     }
 
-    /// Searches finding in turn an answering device, whose stored path then answers the rest of `answers`,
-    /// a device that does not answer (`[None]`, not stored), or nothing (None).
-    struct Searches {
-        found: Vec<Vec<Option<u8>>>,
-        stored: Option<std::vec::IntoIter<Option<u8>>>,
-    }
-
-    impl Searches {
-        fn new(found: Vec<Option<Vec<Option<u8>>>>) -> Self {
-            Self { found: found.into_iter().map(Option::unwrap_or_default).rev().collect(), stored: None }
-        }
-
-        fn read(&mut self) -> Lookup {
-            if let Some(stored) = self.stored.as_mut() {
-                return Lookup::Found(stored.next().flatten());
-            }
-            let mut answers = self.found.pop().unwrap_or_default().into_iter();
-            let Some(level) = answers.next() else { return Lookup::NotFound };
-            if level.is_some() {
-                self.stored = Some(answers);
-            }
-            Lookup::Found(level)
-        }
-
-        fn forget(&mut self) -> bool {
-            self.stored.take().is_some()
-        }
-    }
-
-    fn read(searches: &mut Searches) -> Lookup {
-        read_searching_again(searches, Searches::read, Searches::forget)
-    }
-
     #[test]
-    fn device_that_stops_answering_is_searched_again() {
-        // After the computer slept, the device comes back under a new path: the stored one fails
-        let mut searches = Searches::new(vec![Some(vec![Some(80), None]), Some(vec![Some(42)])]);
-        assert_eq!(read(&mut searches), Lookup::Found(Some(80)));
-        assert_eq!(read(&mut searches), Lookup::Found(Some(42)));
-    }
-
-    #[test]
-    fn device_no_longer_found_is_dropped() {
-        let mut searches = Searches::new(vec![Some(vec![Some(80), None]), None]);
-        assert_eq!(read(&mut searches), Lookup::Found(Some(80)));
-        assert_eq!(read(&mut searches), Lookup::NotFound);
-    }
-
-    #[test]
-    fn found_device_that_does_not_answer_has_no_level() {
-        // E.g. a receiver whose keyboard is asleep: not searched twice in one read, searched again on the next
-        let mut searches = Searches::new(vec![Some(vec![None]), Some(vec![Some(42)])]);
-        assert_eq!(read(&mut searches), Lookup::Found(None));
-        assert_eq!(read(&mut searches), Lookup::Found(Some(42)));
-    }
-
-    /// Candidates are named by their level, and record which ones were read.
-    fn first_answering_of(levels: &[Option<u8>]) -> (Lookup, Option<usize>, Vec<usize>) {
-        let read = std::cell::RefCell::new(Vec::new());
-        let (lookup, answering) = first_answering((0..levels.len()).collect(), |index| {
-            read.borrow_mut().push(*index);
-            levels[*index]
-        });
-        (lookup, answering, read.into_inner())
-    }
-
-    #[test]
-    fn first_answering_skips_collections_that_do_not_answer() {
+    fn first_answering_keeps_the_first_collection_that_answers() {
+        // Candidates are indexes into `levels`; returns the lookup, the kept candidate and the ones read
+        let first_answering_of = |levels: &[Option<u8>]| {
+            let read = std::cell::RefCell::new(Vec::new());
+            let (lookup, answering) = first_answering((0..levels.len()).collect(), |index| {
+                read.borrow_mut().push(*index);
+                levels[*index]
+            });
+            (lookup, answering, read.into_inner())
+        };
         // E.g. two receivers with the same VID/PID, the device paired with the second one
         assert_eq!(first_answering_of(&[None, Some(80), Some(42)]), (Lookup::Found(Some(80)), Some(1), vec![0, 1]));
-    }
-
-    #[test]
-    fn first_answering_without_answer_keeps_nothing() {
+        // E.g. the device is asleep: nothing is kept, the next read searches again
         assert_eq!(first_answering_of(&[None, None]), (Lookup::Found(None), None, vec![0, 1]));
-    }
-
-    #[test]
-    fn first_answering_without_candidate_is_not_found() {
         assert_eq!(first_answering_of(&[]), (Lookup::NotFound, None, vec![]));
     }
 
