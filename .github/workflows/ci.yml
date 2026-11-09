@@ -2,33 +2,15 @@ name: "Linter and tests"
 
 on:
   pull_request:
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "assets/**"
-      - "macos/**"
-      - "build.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "rustfmt.toml"
-      - "updater-key.pub"
-      - ".github/workflows/ci.yml"
+    paths-ignore: &ignored
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
+      - "LICENSE"
   push:
     branches:
       - main
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "assets/**"
-      - "macos/**"
-      - "build.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "rustfmt.toml"
-      - "updater-key.pub"
-      - ".github/workflows/ci.yml"
+    paths-ignore: *ignored
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

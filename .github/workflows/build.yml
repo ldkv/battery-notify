@@ -2,33 +2,13 @@ name: "Windows and macOS builds"
 
 on:
   pull_request:
-    paths:
-      - "src/**"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
       - "tests/**"
-      - "assets/**"
-      - "macos/**"
-      - "build.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "rustfmt.toml"
-      - "updater-key.pub"
-      - ".github/workflows/build.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "assets/**"
-      - "macos/**"
-      - "build.rs"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "rustfmt.toml"
-      - "updater-key.pub"
-      - ".github/workflows/build.yml"
+      - "LICENSE"
+
   # Releases build the Windows executable and the macOS app of the released tag
   workflow_call:
     inputs:
