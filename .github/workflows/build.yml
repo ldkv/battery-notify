@@ -159,7 +159,7 @@ jobs:
           codesign --verify --verbose "$app"
           wait_for_log() {
             for _ in $(seq 60); do
-              grep -qs "$1" ~/Library/Logs/battery-notifier/battery_notifier_rust.*.log && return 0
+              grep -qs "$1" ~/"Library/Application Support/battery-notifier/Logs/"battery_notifier_rust.*.log && return 0
               sleep 2
             done
             return 1
@@ -173,7 +173,7 @@ jobs:
             screencapture -x "$RUNNER_TEMP/settings-dialog.png" || true
           fi
           pkill -f "$app/Contents/MacOS/battery-notifier" || true
-          cat ~/Library/Logs/battery-notifier/battery_notifier_rust.*.log || true
+          cat ~/"Library/Application Support/battery-notifier/Logs/"battery_notifier_rust.*.log || true
           [ "$tray" = 1 ] || { echo "::error::App did not complete its first battery check"; exit 1; }
           [ "$dialog" = 1 ] || { echo "::error::Settings dialog did not open"; exit 1; }
 
