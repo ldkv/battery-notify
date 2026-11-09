@@ -61,7 +61,7 @@ There is no release for Linux, which is untested. Build it from source, see [Dev
 
 Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, how often the low battery notification repeats, which devices are checked, and whether the app runs at startup.
 
-Settings are saved to `config.toml` and logs to `Logs/battery_notifier_rust.<date>.log`, both under `%LOCALAPPDATA%\battery-notifier` (**Open settings folder** in the tray menu). On macOS / Linux, they follow the OS conventions of [platformdirs](https://platformdirs.readthedocs.io/).
+Settings are saved to `config.toml` and logs to `Logs/battery_notifier_rust.<date>.log`, both in the settings folder (**Open settings folder** in the settings dialog): `%LOCALAPPDATA%\battery-notifier` on Windows, `~/Library/Application Support/battery-notifier` on macOS and `~/.config/battery-notifier` on Linux.
 
 The dialog can also be opened from a terminal with `battery-notifier settings`.
 

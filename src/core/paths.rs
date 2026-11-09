@@ -36,14 +36,9 @@ pub fn state_dir() -> PathBuf {
     }
 }
 
+/// Inside the settings folder on every OS, so the settings dialog's folder link reaches the logs too.
 pub fn log_dir() -> PathBuf {
-    if cfg!(target_os = "windows") {
-        ensure(config_dir().join("Logs"))
-    } else if cfg!(target_os = "macos") {
-        ensure(home().join("Library/Logs").join(APP_NAME))
-    } else {
-        ensure(state_dir().join("log"))
-    }
+    ensure(config_dir().join("Logs"))
 }
 
 pub fn config_file() -> PathBuf {
