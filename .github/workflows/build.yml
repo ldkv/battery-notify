@@ -2,12 +2,19 @@ name: "Windows and macOS builds"
 
 on:
   pull_request:
-    paths-ignore:
+    paths-ignore: &ignored-paths
       - "**.md"
       - "docs/**"
       - "scripts/**"
       - "tests/**"
       - "LICENSE"
+
+  # Builds on main save the Rust cache that pull requests restore
+  push:
+    branches: [main]
+    paths-ignore: *ignored-paths
+
+  workflow_dispatch:
 
   # Releases build the Windows executable and the macOS app of the released tag
   workflow_call:
@@ -26,8 +33,8 @@ jobs:
   build-windows:
     runs-on: windows-latest
     env:
-      # Pull requests build the faster `ci` profile, main the release one
-      CARGO_PROFILE: ${{ github.event_name == 'pull_request' && 'ci' || 'release' }}
+      # Releases build the release profile, everything else the faster `ci` one, so main and pull requests share a cache
+      CARGO_PROFILE: ${{ inputs.ref && 'release' || 'ci' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -132,7 +139,7 @@ jobs:
           archive: false
           if-no-files-found: error
 
-  # Pull requests compile and test on macOS in the check job: build the app on main only
+  # Pull requests compile and test on macOS in the check job: build the app on main, releases and manual runs
   build-macos:
     if: github.event_name != 'pull_request'
     runs-on: macos-latest

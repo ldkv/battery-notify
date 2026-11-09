@@ -26,7 +26,7 @@ Linux lacks Segoe UI, so judge the look from Windows: the `build` workflow uploa
 ## CI and releases
 
 - The `ci` workflow runs `cargo fmt --check`, clippy and the tests on Ubuntu, Windows and macOS.
-- The `build` workflow builds and smoke tests the Windows exe and, on `main` and releases, the macOS app (`macos/bundle.sh`: universal binary through `lipo`, ad-hoc signed). The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
+- The `build` workflow builds and smoke tests the Windows exe and, on `main`, releases and manual runs (`gh workflow run build.yml --ref <branch>`), the macOS app (`macos/bundle.sh`: universal binary through `lipo`, ad-hoc signed). The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
 - release-please has one package at the root, tagged `v<version>` without component, which the updater looks for; the workflow syncs `Cargo.lock` in each release PR. The release workflow calls `build` for the created tag and publishes the Windows zip and macOS app with `SHA256SUMS.txt`.
 - Release file names (`battery_notifier_rust-<version>-<platform>.zip`) are what installed apps' updater looks for: renaming them breaks updates of released apps.
 
