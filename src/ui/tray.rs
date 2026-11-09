@@ -11,7 +11,6 @@ use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 use crate::VERSION;
-use crate::core::paths::config_dir;
 use crate::core::policy::{BatteryStatus, Notifier, battery_status, lowest_level};
 use crate::core::poller::Poller;
 use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider, OsProvider};
@@ -23,7 +22,6 @@ use crate::updater::{self, AvailableUpdate, RELEASES_PAGE};
 const NO_DEVICE_TEXT: &str = "No device found yet";
 const REFRESH_ID: &str = "refresh";
 const SETTINGS_ID: &str = "settings";
-const OPEN_FOLDER_ID: &str = "open_folder";
 const QUIT_ID: &str = "quit";
 const UPDATE_ID: &str = "update";
 const UPDATE_CHECK_INTERVAL: Duration = Duration::from_hours(24);
@@ -138,7 +136,6 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                     let _ = wake.send(());
                 }
                 SETTINGS_ID => open_settings(&dialog_open, &settings, &wake),
-                OPEN_FOLDER_ID => platform.open_folder(&config_dir()),
                 UPDATE_ID => {
                     if let Some(update) = menu.update.clone().filter(|_| !menu.updating) {
                         menu.updating = true;

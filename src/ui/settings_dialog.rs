@@ -9,7 +9,7 @@ use eframe::egui::{
     ViewportCommand,
 };
 
-use crate::core::paths::{log_dir, seen_devices_file};
+use crate::core::paths::{config_dir, seen_devices_file};
 use crate::core::poller::known_device_names;
 use crate::core::settings::{Errors, FIELDS, Field, FieldKind, Settings};
 use crate::platforms::Platform;
