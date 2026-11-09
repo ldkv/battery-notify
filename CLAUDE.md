@@ -1,27 +1,19 @@
 # battery-notify
 
-Windows tray app showing the battery level of HID and Bluetooth devices. Python, managed with uv; run checks with `task check-all` (see `Taskfile.yml`).
+Windows and macOS tray app showing the battery level of HID and Bluetooth devices. A Rust Cargo package at the repository root; run checks with `task check-all` (see `Taskfile.yml`).
 
 ## Architecture
 
-- `core/`: pure logic (devices, providers, poller, policy, settings), no GUI and no OS calls, so it stays testable on Linux and reusable by a future headless mode.
-- `platforms/`: one module per OS behind the `Platform` base class, whose defaults are the unsupported-OS fallback. Reach Windows code only through `current_platform()`. The package is `platforms`, plural: the build puts `src/battery_notifier` on `sys.path`, where a `platform` package would shadow the stdlib module.
-- `ui/`: pystray tray, icon renderer, tk settings dialog.
-- The settings dialog runs in its own process (`battery-notifier settings`); exit code 0 means saved, and the tray then reloads `config.toml`.
-
-## Windows-only code
-
-Windows is the target: pyrefly checks the whole project with `python-platform = "win32"`, Windows-only dependencies carry `sys_platform == 'win32'` markers, and tests needing Windows or a display skip themselves elsewhere. CI runs on Ubuntu and Windows.
-
-## Settings and dialog
-
-- A setting is one `setting(...)` field on `Settings`; the dialog form is generated from it. Supported types are `int` and `frozenset[str]`; a new type needs a branch in `settings._parse` and `ui/form.py`.
-- sv_ttk recolors every existing widget (`tk_setPalette`) once the theme change is processed, so the dialog applies the theme before creating any widget, then sets label colors and entry fonts per widget: custom ttk styles lose to sv_ttk.
-- The dialog never resizes or moves fields: `fix_size` sizes the window for the longest possible error message, shown on one status line. A new error message must be added there; `tests/test_settings_dialog.py` checks the layout stays put.
+- `src/core/`: pure logic (devices, providers, poller, policy, settings), no GUI and no OS calls, so it stays testable on Linux and reusable by a future headless mode.
+- `src/platforms/`: one module per OS behind the `Platform` trait, whose defaults are the unsupported-OS fallback. Reach OS code only through `current_platform()`.
+- `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, `egui` settings dialog.
+- The settings dialog runs in its own process (`battery-notifier settings`); exit code 0 means saved, and the tray then reloads `config.toml`. The tray holds the dialog's stdin (`--close-with-tray`): the dialog closes when the tray quits.
+- A setting is one entry of `FIELDS` in `src/core/settings.rs`; the dialog is generated from it. Supported kinds are in `FieldKind`.
+- Settings, the seen devices file and the single-instance lock keep the paths of earlier releases, so updates keep the user's files. Non-Windows single instance is a `flock` on `<state_dir>/<name>.lock`.
 
 ## Icons
 
-The app icon (Windows executables, macOS app, settings dialog, Rust notifications) comes from `src/battery_notifier/assets/app-icon.svg`. After editing it, regenerate the committed `.png`, `.ico` and `.icns` beside it, used by both versions: `uvx --from cairosvg --with pillow python scripts/render_app_icon.py`.
+The app icon (Windows executable, macOS app, settings dialog, notifications) comes from `assets/app-icon.svg`. After editing it, regenerate the committed `.png`, `.ico` and `.icns` beside it: `uvx --from cairosvg --with pillow python scripts/render_app_icon.py`.
 
 The tray icon is separate: a live battery glyph.
 
@@ -29,20 +21,22 @@ Glyphs come from Segoe Fluent Icons / Segoe MDL2 Assets: `Battery0`–`Battery9`
 
 ## Seeing the GUI
 
-Check layout locally under Xvfb: `DIALOG_SCREENSHOTS=shots xvfb-run -a uv run pytest tests/test_settings_dialog.py` saves the dialog with each error shown. Linux lacks Segoe UI, so judge the look from Windows: the CI jobs upload screenshots as artifacts, `settings-dialog-errors` and `tray-icons` (ci workflow), `settings-dialog-screenshot` (build workflow). Fetch them with `gh run download <run-id> -n <artifact>` and look at them before claiming a UI change works.
+Linux lacks Segoe UI, so judge the look from Windows: the `build` workflow uploads screenshots as artifacts, `settings-dialog-screenshot` (Windows) and `macos-settings-dialog-screenshot`. Fetch them with `gh run download <run-id> -n <artifact>` and look at them before claiming a UI change works.
 
-## Build
+## CI and releases
 
-`task generate-executable` builds one Nuitka onefile exe (Windows only):
+- The `ci` workflow runs `cargo fmt --check`, clippy and the tests on Ubuntu, Windows and macOS.
+- The `build` workflow builds and smoke tests the Windows exe and, on `main` and releases, the macOS app (`macos/bundle.sh`: universal binary through `lipo`, ad-hoc signed). The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
+- release-please has one package at the root, tagged `v<version>` without component, which the updater looks for; the workflow syncs `Cargo.lock` in each release PR. The release workflow calls `build` for the created tag and publishes the Windows zip and macOS app with `SHA256SUMS.txt`.
+- Release file names (`battery_notifier_rust-<version>-<platform>.zip`) are what installed apps' updater looks for: renaming them breaks updates of released apps.
 
-- Unpacked once per version to `%LOCALAPPDATA%\battery-notifier\app\<version>`; `UNPACK_ROOT` in `launcher.py` must match `--onefile-tempdir-spec`.
-- `scripts/tcl_tk_libraries.py` extracts the Tcl/Tk libraries that uv's standalone Python zips inside its DLLs, where Nuitka cannot find them. The build workflow uses uv's Python (`UV_PYTHON_PREFERENCE=only-managed`) to match developer machines.
-- `--include-package=winrt`: winrt submodules are imported from native code, invisible to Nuitka. `--include-package-data=winrt`: since winrt 4, each projection reads its `_table.pywinrt` at import; without it the exe dies at startup, before logging anything.
-- The windowed exe has no stderr: errors only show in the log under `%LOCALAPPDATA%\battery-notifier\Logs`.
+## macOS
 
-## Rust port
+The tray runs with the `Accessory` activation policy (no Dock icon) but the settings dialog does not, so it can take focus. Notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception.
 
-`rust/` is a standalone Cargo package porting the app, same module layout, released separately from Python: release-please has two packages, Python at the root (tags `python-v<version>`, excluding `rust/` and `.github/`, so that a Rust release commit does not release Python) and Rust in `rust/` (tags `v<version>` without component, which the Rust updater looks for), each with its own version and release PR; the workflow syncs `uv.lock` in each release PR. The release workflow calls `python-build-windows` or `rust-build` for the created tag and publishes the Python exe, or the Rust Windows zip and macOS app, with `SHA256SUMS.txt`. A Python release becomes GitHub's latest release, so its publish job marks the latest `v*` release as latest again: the Rust updater reads `releases/latest`. It shares `config.toml`, the seen devices file and the single-instance mutex with the Python version. Checks: `task rust-check` and `task rust-test`, run by the `rust-ci` workflow; the `rust-build` workflow builds and smoke tests the Windows exe and, on `main` and releases, the macOS app (`rust/macos/bundle.sh`: universal binary through `lipo`, ad-hoc signed). On macOS, the tray runs with the `Accessory` activation policy (no Dock icon) but the settings dialog does not, so it can take focus; notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception. Non-Windows single instance is a `flock` on `<state_dir>/<name>.lock`. When changing a feature, change both versions until Python is retired, except self-updates, which are Rust-only: `src/updater.rs` checks the latest release daily (release builds only), verifies the zip's zipsign signature for its file name against `rust/updater-key.pub`, and installs the versioned exe next to the running one, which the new version deletes once started with `--after-update <previous exe>`, or replaces the whole `.app` (renaming the bundle: replacing only the binary would break its signature). The release workflow signs the Rust zips with the `ZIPSIGN_PRIVATE_KEY` secret; the Rust Windows exe ships zipped for that reason.
+## Updates
+
+`src/updater.rs` checks the latest release daily (release builds only), verifies the zip's zipsign signature for its file name against `updater-key.pub`, and installs the versioned exe next to the running one, which the new version deletes once started with `--after-update <previous exe>`, or replaces the whole `.app` (renaming the bundle: replacing only the binary would break its signature). The release workflow signs the zips with the `ZIPSIGN_PRIVATE_KEY` secret; the Windows exe ships zipped for that reason.
 
 ## Commits
 

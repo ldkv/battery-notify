@@ -1,25 +1,17 @@
 version: 2
 
 updates:
-  - package-ecosystem: "uv"
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "daily"
     cooldown:
       default-days: 3
-    allow:
-      - dependency-type: "all"
-
-  - package-ecosystem: "cargo"
-    directory: "/rust"
-    schedule:
-      interval: "daily"
-    cooldown:
-      default-days: 3
     ignore:
-      # Must match the version `windows` depends on (see rust/Cargo.toml).
+      # Must match the version `windows` depends on (see Cargo.toml).
       - dependency-name: "windows-collections"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

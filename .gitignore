@@ -1,31 +1,11 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-**/.*_cache/
-.cache
-.pytype/
-
-# Unit test / coverage reports
-htmlcov/
-coverage.xml
-.pytest_cache/
-.python-version
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
-docs/_build/
+# Build output
+/target/
 
 # Personal files
-.idea/
 .vscode/
 .DS_Store
 .dev*
 .env
 .envrc
-.venv*
 *.log
 screenshots/
-
-# Rust
-rust/target/

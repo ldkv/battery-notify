@@ -1,26 +1,20 @@
-name: "Rust: linter and tests"
+name: "Linter and tests"
 
 on:
   pull_request:
-    paths:
-      - "rust/**"
-      - "src/battery_notifier/assets/**"
-      - ".github/workflows/rust-ci.yml"
+    paths-ignore: &ignored
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
+      - "LICENSE"
   push:
     branches:
       - main
-    paths:
-      - "rust/**"
-      - "src/battery_notifier/assets/**"
-      - ".github/workflows/rust-ci.yml"
+    paths-ignore: *ignored
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-defaults:
-  run:
-    working-directory: rust
 
 jobs:
   check:
@@ -37,11 +31,9 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libgtk-3-dev libxdo-dev libayatana-appindicator3-dev
 
-      # The toolchain pinned in rust/rust-toolchain.toml is installed by rustup on first use
+      # The toolchain pinned in rust-toolchain.toml is installed by rustup on first use
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
 
       - name: Check formatting
         run: cargo fmt --check

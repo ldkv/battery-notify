@@ -1,4 +1,4 @@
-//! Per-user locations, the same as the Python version (platformdirs) so that both share their files.
+//! Per-user locations, following the platformdirs conventions so that settings of earlier releases carry over.
 //! On Windows, everything lives under %LOCALAPPDATA%\battery-notifier.
 
 use std::fs;

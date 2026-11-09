@@ -11,8 +11,7 @@ use crate::core::settings::Settings;
 
 pub const SIZE: u32 = 64;
 /// The app icon, a battery in a gear, rendered from its SVG by scripts/render_app_icon.py.
-/// The icon files live in the Python package, which must contain the PNG at runtime.
-pub const APP_ICON_PNG: &[u8] = include_bytes!("../../../src/battery_notifier/assets/app-icon.png");
+pub const APP_ICON_PNG: &[u8] = include_bytes!("../../assets/app-icon.png");
 const LOW_COLOR: Rgb = Rgb(0xff, 0xb9, 0x00); // Windows amber
 const CRITICAL_COLOR: Rgb = Rgb(0xe8, 0x11, 0x23); // Windows red
 const ON_DARK_COLOR: Rgb = Rgb(0xff, 0xff, 0xff);
@@ -44,7 +43,7 @@ pub fn battery_glyph(level: Option<u8>) -> char {
     let Some(level) = level else {
         return UNKNOWN_GLYPH;
     };
-    // level / 10 rounded half to even, like Python's round()
+    // level / 10 rounded half to even
     let (tens, units) = (u32::from(level.min(100)) / 10, u32::from(level.min(100)) % 10);
     let step = if units > 5 || (units == 5 && tens % 2 == 1) { tens + 1 } else { tens };
     match step {

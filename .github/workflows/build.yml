@@ -1,16 +1,14 @@
-name: "Rust: Windows and macOS builds"
+name: "Windows and macOS builds"
 
 on:
   pull_request:
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-build.yml"
-  push:
-    branches:
-      - main
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-build.yml"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
+      - "tests/**"
+      - "LICENSE"
+
   # Releases build the Windows executable and the macOS app of the released tag
   workflow_call:
     inputs:
@@ -20,13 +18,9 @@ on:
         required: true
 
 concurrency:
-  # Not github.workflow: when called, it is the caller's name, shared with the Python build
-  group: rust-build-${{ inputs.ref || github.ref }}
+  # Not github.workflow: when called, it is the caller's name
+  group: build-${{ inputs.ref || github.ref }}
   cancel-in-progress: true
-
-defaults:
-  run:
-    working-directory: rust
 
 jobs:
   build-windows:
@@ -42,8 +36,6 @@ jobs:
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
 
       - name: Build executable
         run: cargo build --profile $env:CARGO_PROFILE --locked
@@ -113,7 +105,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: rust-settings-dialog-screenshot
+          name: settings-dialog-screenshot
           path: ${{ runner.temp }}/settings-dialog.png
           if-no-files-found: ignore
 
@@ -136,7 +128,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          path: rust/target/${{ env.CARGO_PROFILE }}/${{ steps.zip.outputs.name }}
+          path: target/${{ env.CARGO_PROFILE }}/${{ steps.zip.outputs.name }}
           archive: false
           if-no-files-found: error
 
@@ -155,8 +147,6 @@ jobs:
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
 
       - name: Build app
         run: macos/bundle.sh
@@ -191,7 +181,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: rust-macos-settings-dialog-screenshot
+          name: macos-settings-dialog-screenshot
           path: ${{ runner.temp }}/settings-dialog.png
           if-no-files-found: ignore
 
@@ -207,6 +197,6 @@ jobs:
       - name: Upload app
         uses: actions/upload-artifact@v7
         with:
-          path: rust/target/release/${{ steps.zip.outputs.name }}
+          path: target/release/${{ steps.zip.outputs.name }}
           archive: false
           if-no-files-found: error
