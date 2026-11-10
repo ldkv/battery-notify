@@ -7,7 +7,7 @@ Windows and macOS tray app showing the battery level of HID and Bluetooth device
 - `src/core/`: pure logic (devices, providers, poller, policy, settings), no GUI and no OS calls, so it stays testable on Linux and reusable by a future headless mode.
 - `src/platforms/`: one module per OS behind the `Platform` trait, whose defaults are the unsupported-OS fallback. Reach OS code only through `current_platform()`.
 - `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, `egui` settings dialog.
-- The settings dialog runs in its own process (`battery-notifier settings`); exit code 0 means saved, and the tray then reloads `config.toml`. The tray holds the dialog's stdin (`--close-with-tray`): the dialog closes when the tray quits.
+- The settings dialog runs in its own process (`battery-notifier settings`); exit code 0 means saved, and the tray then reloads `config.toml`. The tray holds the dialog's stdin (`--close-with-tray`): the dialog closes when the tray quits, and comes to the front on each line the tray writes when Settings is clicked again.
 - A setting is one entry of `FIELDS` in `src/core/settings.rs`; the dialog is generated from it. Supported kinds are in `FieldKind`.
 - Settings, the seen devices file and the single-instance lock keep the paths of earlier releases, so updates keep the user's files. Non-Windows single instance is a `flock` on `<state_dir>/<name>.lock`.
 
@@ -32,7 +32,7 @@ Linux lacks Segoe UI, so judge the look from Windows: the `build` workflow uploa
 
 ## macOS
 
-The tray runs with the `Accessory` activation policy (no Dock icon) but the settings dialog does not, so it can take focus. Notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception.
+The bundle is an agent app (`LSUIElement` in `macos/Info.plist`) and the tray also sets the `Accessory` activation policy, for runs without a bundle: switching policy only after launch can leave a ghost icon in Cmd+Tab when started at login. The settings dialog is then not in the Dock or Cmd+Tab either. Notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception.
 
 ## Updates
 
