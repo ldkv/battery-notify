@@ -182,4 +182,14 @@ mod tests {
         names.dedup();
         assert_eq!(names.len(), HID_DEVICES.len());
     }
+
+    #[test]
+    fn readme_lists_every_device() {
+        let readme = include_str!("../../../README.md");
+        let section = readme.split("## Supported devices").nth(1).expect("no Supported devices section in README");
+        let section = section.split("\n## ").next().unwrap_or_default();
+        for device_type in &HID_DEVICES {
+            assert!(section.contains(device_type.name), "{} is missing from README.md", device_type.name);
+        }
+    }
 }
