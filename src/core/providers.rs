@@ -2,10 +2,12 @@
 
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::path::PathBuf;
 
 use hidapi::{BusType, HidApi};
 
-use crate::core::devices::{DeviceType, Driver, HID_DEVICES};
+use crate::core::devices::{DeviceType, Driver};
+use crate::core::extra_devices;
 use crate::core::settings::Settings;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -36,12 +38,14 @@ struct FoundDevice {
 #[derive(Default)]
 pub struct HidProvider {
     api: Option<HidApi>,
-    devices: HashMap<&'static str, FoundDevice>,
+    devices: HashMap<String, FoundDevice>,
+    /// Read on each read, see `extra_devices`. None: only the built-in devices.
+    extra_devices_file: Option<PathBuf>,
 }
 
 impl HidProvider {
-    pub fn device_names() -> Vec<&'static str> {
-        HID_DEVICES.iter().map(|device_type| device_type.name).collect()
+    pub fn new(extra_devices_file: PathBuf) -> Self {
+        Self { extra_devices_file: Some(extra_devices_file), ..Self::default() }
     }
 
     fn api(&mut self) -> Option<&mut HidApi> {
@@ -98,12 +102,12 @@ impl HidProvider {
     /// Read the stored device. One that does not answer is forgotten and searched again: it may have come back
     /// under a new path, e.g. after the computer slept, and the stored one would keep failing.
     fn level(&mut self, device_type: &DeviceType) -> Lookup {
-        if let Some(device) = self.devices.get(device_type.name) {
+        if let Some(device) = self.devices.get(&*device_type.name) {
             if let Some(level) = self.read_level(device_type, device) {
                 return Lookup::Found(Some(level));
             }
             tracing::info!("No answer from {}, searching it again", device_type.name);
-            self.devices.remove(device_type.name);
+            self.devices.remove(&*device_type.name);
         }
         let candidates = self.candidates(device_type);
         if candidates.is_empty() {
@@ -112,7 +116,7 @@ impl HidProvider {
         let (lookup, answering) = first_answering(candidates, |device| self.read_level(device_type, device));
         if let Some(device) = answering {
             tracing::info!("Device found for {}: {:?}", device_type.name, device.path);
-            self.devices.insert(device_type.name, device);
+            self.devices.insert(device_type.name.to_string(), device);
         }
         lookup
     }
@@ -120,9 +124,9 @@ impl HidProvider {
 
 impl BatteryProvider for HidProvider {
     fn read(&mut self, settings: &Settings) -> Vec<BatteryReading> {
-        HID_DEVICES
+        extra_devices::device_types(self.extra_devices_file.as_deref())
             .iter()
-            .filter(|device_type| settings.is_enabled(device_type.name))
+            .filter(|device_type| settings.is_enabled(&device_type.name))
             .filter_map(|device_type| self.reading(device_type))
             .collect()
     }
@@ -184,7 +188,8 @@ mod tests {
     #[test]
     fn hid_provider_does_not_open_disabled_devices() {
         let mut provider = HidProvider::default();
-        let disabled = HidProvider::device_names().into_iter().map(String::from).collect();
+        let disabled =
+            extra_devices::device_types(None).into_iter().map(|device_type| device_type.name.into_owned()).collect();
         assert_eq!(provider.read(&Settings { disabled_devices: disabled, ..Settings::default() }), []);
         assert!(provider.api.is_none(), "hidapi was initialized");
     }

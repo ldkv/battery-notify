@@ -1,6 +1,7 @@
 //! Settings dialog, generated from the settings `FIELDS`.
 //! Runs in its own process: `battery-notifier settings`, exit code 0 when saved.
 
+use std::io::BufRead;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -9,7 +10,7 @@ use eframe::egui::{
     ViewportCommand,
 };
 
-use crate::core::paths::{config_dir, seen_devices_file};
+use crate::core::paths::{config_dir, extra_devices_file, seen_devices_file};
 use crate::core::poller::known_device_names;
 use crate::core::settings::{Errors, FIELDS, Field, FieldKind, Settings};
 use crate::platforms::Platform;
@@ -222,7 +223,7 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: boo
     let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
-    let device_names = known_device_names(&settings, &seen_devices_file());
+    let device_names = known_device_names(&settings, &seen_devices_file(), &extra_devices_file());
     let form = Form::new(settings, device_names);
     let result = eframe::run_native(
         TITLE,
@@ -260,7 +261,11 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: boo
 /// Close the dialog once stdin closes: the tray app holds the other end until it quits or crashes.
 fn close_when_tray_quits(ctx: egui::Context) {
     let spawned = std::thread::Builder::new().name("tray_watch".to_string()).spawn(move || {
-        let _ = std::io::copy(&mut std::io::stdin().lock(), &mut std::io::sink());
+        // The tray sends a line when its Settings item is clicked again
+        for _ in std::io::stdin().lock().lines().map_while(Result::ok) {
+            ctx.send_viewport_cmd(ViewportCommand::Focus);
+            ctx.request_repaint();
+        }
         tracing::info!("Tray app closed, closing the settings dialog");
         ctx.send_viewport_cmd(ViewportCommand::Close);
         ctx.request_repaint();

@@ -1,10 +1,11 @@
+use std::borrow::Cow;
 use std::thread;
 use std::time::Duration;
 
 use super::{DeviceType, Driver, Filter, HidIo, read_reply};
 
 pub const RAZER_PRO_CLICK_MINI: DeviceType = DeviceType {
-    name: "Razer Pro Click Mini",
+    name: Cow::Borrowed("Razer Pro Click Mini"),
     vid: 0x1532,
     pid: 0x009A,
     filter: Filter { interface_number: Some(0), ..Filter::ANY },
@@ -61,7 +62,7 @@ const MAX_BATTERY_LEVEL: u8 = 100;
 
 /// Keychron M6 8K connected via the 2.4 GHz receiver Keychron Ultra-Link 8K, with stock firmware.
 pub const KEYCHRON_M6: DeviceType = DeviceType {
-    name: "Keychron M6",
+    name: Cow::Borrowed("Keychron M6"),
     vid: 0x3434, // Keychron
     pid: 0xD028, // Keychron Ultra-Link 8K
     filter: Filter { usage_page: Some(0xFFC1), usage: Some(0x01), interface_number: None },

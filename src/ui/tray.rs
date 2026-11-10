@@ -1,5 +1,5 @@
-use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::io::Write;
+use std::process::{ChildStdin, Command, Stdio};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
@@ -11,6 +11,7 @@ use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 use crate::VERSION;
+use crate::core::paths::extra_devices_file;
 use crate::core::policy::{BatteryStatus, Notifier, battery_status, lowest_level};
 use crate::core::poller::Poller;
 use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider, OsProvider};
@@ -50,6 +51,8 @@ struct MenuState {
 }
 
 type SharedSettings = Arc<Mutex<Settings>>;
+/// The open settings dialog's stdin: a line brings the dialog to the front.
+type DialogInput = Arc<Mutex<Option<ChildStdin>>>;
 
 fn current(settings: &SharedSettings) -> Settings {
     settings.lock().unwrap_or_else(PoisonError::into_inner).clone()
@@ -89,7 +92,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
     let mut wake_receiver = Some(wake_receiver);
     let mut tray: Option<TrayIcon> = None;
     let mut menu = MenuState::default();
-    let dialog_open = Arc::new(AtomicBool::new(false));
+    let dialog: DialogInput = Arc::default();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
@@ -147,7 +150,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
                 REFRESH_ID => {
                     let _ = wake.send(());
                 }
-                SETTINGS_ID => open_settings(&dialog_open, &settings, &wake),
+                SETTINGS_ID => open_settings(&dialog, &settings, &wake),
                 UPDATE_ID => {
                     if let Some(update) = menu.update.clone().filter(|_| !menu.updating) {
                         menu.updating = true;
@@ -241,7 +244,7 @@ fn device_loop(
 ) {
     let bluetooth_platform = platform.clone();
     let providers: Vec<Box<dyn BatteryProvider>> = vec![
-        Box::new(HidProvider::default()),
+        Box::new(HidProvider::new(extra_devices_file())),
         Box::new(OsProvider::new(move || bluetooth_platform.bluetooth_batteries())),
     ];
     let mut poller = Poller::new(providers);
@@ -275,8 +278,12 @@ fn notify(platform: &dyn Platform, due: &[BatteryReading], settings: &Settings) 
 }
 
 /// Open the settings dialog in its own process, and reload the settings once it saved them.
-fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake: &Sender<()>) {
-    if dialog_open.swap(true, Ordering::SeqCst) {
+fn open_settings(dialog: &DialogInput, settings: &SharedSettings, wake: &Sender<()>) {
+    let mut input = dialog.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(stdin) = input.as_mut() {
+        if let Err(e) = stdin.write_all(b"\n") {
+            tracing::warn!("Could not bring the settings dialog to the front: {e}");
+        }
         return;
     }
     // The dialog closes itself when its stdin closes, i.e. when the tray app quits or crashes
@@ -286,16 +293,15 @@ fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake:
         Ok(child) => child,
         Err(e) => {
             tracing::error!("Could not open the settings dialog: {e}");
-            dialog_open.store(false, Ordering::SeqCst);
             return;
         }
     };
-    let (dialog_open, settings, wake) = (dialog_open.clone(), settings.clone(), wake.clone());
+    // Keep the dialog's stdin open while it runs: Child::wait closes it before waiting
+    *input = child.stdin.take();
+    let (dialog, settings, wake) = (dialog.clone(), settings.clone(), wake.clone());
     thread::spawn(move || {
-        // Keep the dialog's stdin open while it runs: Child::wait closes it before waiting
-        let _tray_end = child.stdin.take();
         let saved = child.wait().is_ok_and(|status| status.success());
-        dialog_open.store(false, Ordering::SeqCst);
+        dialog.lock().unwrap_or_else(PoisonError::into_inner).take();
         if saved {
             let reloaded = Settings::load();
             tracing::info!("Settings reloaded: {reloaded:?}");
