@@ -63,7 +63,7 @@ pub const FIELDS: [Field; 6] = [
         help: "Unchecked devices are ignored",
         kind: FieldKind::Checklist,
     },
-    Field { name: "check_for_updates", label: "Check for updates once a day", help: "", kind: FieldKind::Checkbox },
+    Field { name: "check_for_updates", label: "Daily automatic update check", help: "", kind: FieldKind::Checkbox },
 ];
 
 /// Error message per invalid field name.
