@@ -9,7 +9,7 @@ use eframe::egui::{
     ViewportCommand,
 };
 
-use crate::core::paths::{config_dir, seen_devices_file};
+use crate::core::paths::{config_dir, extra_devices_file, seen_devices_file};
 use crate::core::poller::known_device_names;
 use crate::core::settings::{Errors, FIELDS, Field, FieldKind, Settings};
 use crate::platforms::Platform;
@@ -212,7 +212,7 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: boo
     let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
-    let device_names = known_device_names(&settings, &seen_devices_file());
+    let device_names = known_device_names(&settings, &seen_devices_file(), &extra_devices_file());
     let form = Form::new(settings, device_names);
     let result = eframe::run_native(
         TITLE,

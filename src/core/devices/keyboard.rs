@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
@@ -18,7 +19,7 @@ const MAX_BATTERY_LEVEL: u8 = 100;
 /// Keychron K2 HE connected via the 2.4 GHz receiver Keychron Link.
 /// The keyboard only answers battery requests with the custom firmware described in docs/keychron-k2-he.md.
 pub const KEYCHRON_K2_HE: DeviceType = DeviceType {
-    name: "Keychron K2 HE",
+    name: Cow::Borrowed("Keychron K2 HE"),
     vid: 0x3434, // Keychron
     pid: 0xD030, // Keychron Link
     filter: Filter { usage_page: Some(0xFF60), usage: Some(0x61), interface_number: None },

@@ -11,6 +11,7 @@ use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
 use crate::VERSION;
+use crate::core::paths::extra_devices_file;
 use crate::core::policy::{BatteryStatus, Notifier, battery_status, lowest_level};
 use crate::core::poller::Poller;
 use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider, OsProvider};
@@ -241,7 +242,7 @@ fn device_loop(
 ) {
     let bluetooth_platform = platform.clone();
     let providers: Vec<Box<dyn BatteryProvider>> = vec![
-        Box::new(HidProvider::default()),
+        Box::new(HidProvider::new(extra_devices_file())),
         Box::new(OsProvider::new(move || bluetooth_platform.bluetooth_batteries())),
     ];
     let mut poller = Poller::new(providers);

@@ -2,6 +2,7 @@
 //! Docs: <https://controllers.fandom.com/wiki/Sony_DualSense>
 //! Inspired by: <https://github.com/nondebug/dualsense>
 
+use std::borrow::Cow;
 use std::thread;
 use std::time::Duration;
 
@@ -14,7 +15,7 @@ const FEATURE_REPORT_SIZE: usize = 78;
 const READ_TIMEOUT_MS: i32 = 1000;
 
 pub const DUALSENSE: DeviceType = DeviceType {
-    name: "DualSense controller",
+    name: Cow::Borrowed("DualSense controller"),
     vid: 0x054C, // Sony
     pid: 0x0CE6, // DualSense
     filter: Filter { usage: Some(5), ..Filter::ANY },

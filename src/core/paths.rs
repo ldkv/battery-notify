@@ -45,6 +45,11 @@ pub fn config_file() -> PathBuf {
     config_dir().join("config.toml")
 }
 
+/// Edited by the user, so in the settings folder like `config.toml`.
+pub fn extra_devices_file() -> PathBuf {
+    config_dir().join("extra-devices.toml")
+}
+
 pub fn seen_devices_file() -> PathBuf {
     state_dir().join("seen_devices.json")
 }

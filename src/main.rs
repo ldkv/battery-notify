@@ -6,6 +6,7 @@ use std::process::ExitCode;
 use std::thread::sleep;
 use std::time::Duration;
 
+use battery_notifier::core::paths::extra_devices_file;
 use battery_notifier::core::poller::Poller;
 use battery_notifier::core::providers::{BatteryProvider, HidProvider, OsProvider};
 use battery_notifier::core::settings::Settings;
@@ -89,7 +90,7 @@ fn run_settings_dialog(platform: std::sync::Arc<dyn Platform>, close_with_tray: 
 fn print_battery_levels(platform: &dyn Platform) {
     let bluetooth = platform.bluetooth_batteries();
     let providers: Vec<Box<dyn BatteryProvider>> =
-        vec![Box::new(HidProvider::default()), Box::new(OsProvider::new(move || bluetooth.clone()))];
+        vec![Box::new(HidProvider::new(extra_devices_file())), Box::new(OsProvider::new(move || bluetooth.clone()))];
     let readings = Poller::new(providers).poll(&Settings::load());
     if readings.is_empty() {
         println!("No device found");

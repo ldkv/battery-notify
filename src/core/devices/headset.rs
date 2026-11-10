@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{DeviceType, Driver, Filter, HidIo};
 
 const MESSAGE_SIZE: usize = 52;
@@ -6,7 +8,7 @@ const BATTERY_INDEX: usize = 3;
 const READ_TIMEOUT_MS: i32 = 1000;
 
 pub const HYPERX_CLOUD_ALPHA_WIRELESS: DeviceType = DeviceType {
-    name: "HyperX Cloud Alpha Wireless",
+    name: Cow::Borrowed("HyperX Cloud Alpha Wireless"),
     vid: 0x03F0,
     pid: 0x098D,
     filter: Filter { usage: Some(514), ..Filter::ANY },
