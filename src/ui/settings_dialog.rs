@@ -209,7 +209,16 @@ pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: boo
         Ok(icon) => viewport = viewport.with_icon(icon),
         Err(e) => tracing::warn!("Invalid app icon: {e}"),
     }
-    let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
+    // The bundle is an agent app (LSUIElement) for the tray: the dialog shows in the Dock and Cmd+Tab
+    #[cfg(target_os = "macos")]
+    {
+        use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
+        options.event_loop_builder = Some(Box::new(|builder| {
+            builder.with_activation_policy(ActivationPolicy::Regular);
+        }));
+    }
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
     let device_names = known_device_names(&settings, &seen_devices_file());

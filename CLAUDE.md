@@ -32,7 +32,7 @@ Linux lacks Segoe UI, so judge the look from Windows: the `build` workflow uploa
 
 ## macOS
 
-The tray runs with the `Accessory` activation policy (no Dock icon) but the settings dialog does not, so it can take focus. Notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception.
+The bundle is an agent app (`LSUIElement` in `macos/Info.plist`) and the tray also sets the `Accessory` activation policy, for runs without a bundle: switching policy only after launch can leave a ghost icon in Cmd+Tab when started at login. The settings dialog sets the `Regular` policy, so it can take focus. Notifications go through `UNUserNotificationCenter` from the app bundle (which macOS only allows from Applications or `~/Applications`), and through `osascript` without a bundle, where `UNUserNotificationCenter` would raise an exception.
 
 ## Updates
 

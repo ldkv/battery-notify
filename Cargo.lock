@@ -454,6 +454,7 @@ dependencies = [
  "windows",
  "windows-collections",
  "windows-registry",
+ "winit",
  "winresource",
  "zip",
  "zipsign-api",
