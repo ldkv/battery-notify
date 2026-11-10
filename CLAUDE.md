@@ -36,7 +36,7 @@ The bundle is an agent app (`LSUIElement` in `macos/Info.plist`) and the tray al
 
 ## Updates
 
-`src/updater.rs` checks the latest release daily (release builds only), verifies the zip's zipsign signature for its file name against `updater-key.pub`, and installs the versioned exe next to the running one, which the new version deletes once started with `--after-update <previous exe>`, or replaces the whole `.app` (renaming the bundle: replacing only the binary would break its signature). The release workflow signs the zips with the `ZIPSIGN_PRIVATE_KEY` secret; the Windows exe ships zipped for that reason.
+`src/updater.rs` checks the latest release daily (release builds only, unless `check_for_updates` is off), verifies the zip's zipsign signature for its file name against `updater-key.pub`, and installs the versioned exe next to the running one, which the new version deletes once started with `--after-update <previous exe>`, or replaces the whole `.app` (renaming the bundle: replacing only the binary would break its signature). The release workflow signs the zips with the `ZIPSIGN_PRIVATE_KEY` secret; the Windows exe ships zipped for that reason.
 
 ## Commits
 

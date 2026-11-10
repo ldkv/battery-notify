@@ -33,6 +33,8 @@ pub struct Form {
     pub numbers: Vec<(Field, String)>,
     /// Device name and whether it is enabled.
     pub devices: Vec<(String, bool)>,
+    /// Value of each checkbox field, in `FIELDS` order.
+    pub flags: Vec<(Field, bool)>,
 }
 
 impl Form {
@@ -46,7 +48,8 @@ impl Form {
                 (name, enabled)
             })
             .collect();
-        Self { settings, numbers, devices }
+        let flags = FIELDS.into_iter().filter_map(|field| Some((field, settings.flag(field.name)?))).collect();
+        Self { settings, numbers, devices, flags }
     }
 
     /// Settings as edited, with an error message per invalid field.
@@ -63,6 +66,9 @@ impl Form {
         }
         edited.disabled_devices =
             self.devices.iter().filter(|(_, enabled)| !enabled).map(|(name, _)| name.clone()).collect();
+        for (field, value) in &self.flags {
+            edited.set_flag(field.name, *value);
+        }
         let mut errors = edited.validate();
         errors.extend(parse_errors);
         (edited, errors)
@@ -155,6 +161,10 @@ impl eframe::App for SettingsDialog {
                 }
                 if self.platform.supports_autostart() {
                     ui.checkbox(&mut self.autostart, "Run at startup");
+                    ui.add_space(ROW_GAP);
+                }
+                for (field, value) in &mut self.form.flags {
+                    ui.checkbox(value, field.label);
                     ui.add_space(ROW_GAP);
                 }
                 // One error at a time, below the form: the invalid fields have a red border.
@@ -301,5 +311,15 @@ mod tests {
         assert!(errors.is_empty());
         assert_eq!(settings.low_threshold, 30);
         assert_eq!(settings.disabled_devices, ["Headset".to_string()].into());
+    }
+
+    #[test]
+    fn unchecked_flags_are_saved() {
+        let mut form = form();
+        let (_, value) = form.flags.iter_mut().find(|(field, _)| field.name == "check_for_updates").unwrap();
+        *value = false;
+        let (settings, errors) = form.edited_settings();
+        assert!(errors.is_empty());
+        assert!(!settings.check_for_updates);
     }
 }
