@@ -5,6 +5,7 @@ pub mod headset;
 pub mod keyboard;
 pub mod mouse;
 
+use std::borrow::Cow;
 use std::time::{Duration, Instant};
 
 use hidapi::HidDevice;
@@ -62,7 +63,7 @@ pub trait Driver: Send {
 }
 
 /// Which HID interface of the device to talk to: None matches any value.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Filter {
     pub usage_page: Option<u16>,
     pub usage: Option<u16>,
@@ -79,8 +80,9 @@ impl Filter {
     }
 }
 
+#[derive(Clone)]
 pub struct DeviceType {
-    pub name: &'static str,
+    pub name: Cow<'static, str>,
     pub vid: u16,
     pub pid: u16,
     pub filter: Filter,
@@ -177,7 +179,7 @@ mod tests {
 
     #[test]
     fn device_names_are_unique() {
-        let mut names: Vec<_> = HID_DEVICES.iter().map(|device_type| device_type.name).collect();
+        let mut names: Vec<_> = HID_DEVICES.iter().map(|device_type| &*device_type.name).collect();
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), HID_DEVICES.len());
@@ -189,7 +191,7 @@ mod tests {
         let section = readme.split("## Supported devices").nth(1).expect("no Supported devices section in README");
         let section = section.split("\n## ").next().unwrap_or_default();
         for device_type in &HID_DEVICES {
-            assert!(section.contains(device_type.name), "{} is missing from README.md", device_type.name);
+            assert!(section.contains(&*device_type.name), "{} is missing from README.md", device_type.name);
         }
     }
 }

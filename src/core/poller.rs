@@ -2,8 +2,9 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::core::extra_devices;
 use crate::core::paths::seen_devices_file;
-use crate::core::providers::{BatteryProvider, BatteryReading, HidProvider};
+use crate::core::providers::{BatteryProvider, BatteryReading};
 use crate::core::settings::Settings;
 
 pub struct Poller {
@@ -44,9 +45,13 @@ fn remember_devices(path: &Path, names: BTreeSet<String>) {
     }
 }
 
-pub fn known_device_names(settings: &Settings, seen_devices_file: &Path) -> Vec<String> {
+pub fn known_device_names(settings: &Settings, seen_devices_file: &Path, extra_devices_file: &Path) -> Vec<String> {
     let mut names = load_seen_devices(seen_devices_file);
-    names.extend(HidProvider::device_names().into_iter().map(String::from));
+    names.extend(
+        extra_devices::device_types(Some(extra_devices_file))
+            .into_iter()
+            .map(|device_type| device_type.name.into_owned()),
+    );
     names.extend(settings.disabled_devices.iter().cloned());
     names.into_iter().collect()
 }
@@ -104,12 +109,14 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("seen_devices.json");
         fs::write(&path, r#"["Earbuds"]"#).unwrap();
+        let extra_path = dir.path().join("extra-devices.toml");
+        fs::write(&extra_path, "[[devices]]\nname = \"Keychron M7\"\nsame_as = \"Keychron M6\"").unwrap();
         let settings = Settings { disabled_devices: names(&["Old speaker"]), ..Settings::default() };
 
-        let known = known_device_names(&settings, &path);
+        let known = known_device_names(&settings, &path, &extra_path);
 
-        let mut expected = names(&["Earbuds", "Old speaker"]);
-        expected.extend(HidProvider::device_names().into_iter().map(String::from));
+        let mut expected = names(&["Earbuds", "Old speaker", "Keychron M7"]);
+        expected.extend(extra_devices::device_types(None).into_iter().map(|device_type| device_type.name.into_owned()));
         assert_eq!(known, expected.into_iter().collect::<Vec<_>>());
     }
 

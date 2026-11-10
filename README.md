@@ -74,6 +74,19 @@ The dialog can also be opened from a terminal with `battery-notifier settings`.
 - Keychron M6 8K via the 2.4 GHz receiver Keychron Ultra-Link 8K, tested on Windows: see [docs/keychron-m6.md](docs/keychron-m6.md)
 - Bluetooth devices with battery level on Windows
 
+### Trying another model
+
+A model that is not listed may answer the battery request of a supported one, e.g. another mouse from the same manufacturer. To try it, create `extra-devices.toml` in the settings folder:
+
+```toml
+[[devices]]
+name = "Keychron M7"      # shown in the tray and the settings
+same_as = "Keychron M6"   # supported device whose battery request to send
+pid = 0xD029              # optional: vid, pid, usage_page, usage, interface, default to same_as's
+```
+
+The file is read on each check, and on **Refresh**. Invalid entries are skipped and logged. If the model reports its battery level, please open an issue so it can be added to the list.
+
 ## Development
 
 Install [rustup](https://rustup.rs), the toolchain pinned in `rust-toolchain.toml` is installed on first use, and [Task](https://taskfile.dev/). On Linux, also install the system libraries for HID and the tray icon:
