@@ -51,7 +51,7 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are only s
 
 ### Updates
 
-The app checks for a new release when it starts and then once a day, unless **Daily automatic update check** is off in the settings; **Check for updates** in the menu checks right away. When one is out, a notification says so and the menu shows **Update to <version>**: click it to download, verify and install it, and the app restarts. Each update must carry a valid signature from this project, otherwise it is not installed. If the update cannot be installed, e.g. when the app's folder is not writable, the release page opens to download it by hand.
+The app checks for a new release when it starts and then once a day, unless **Automatically check for updates daily** is off in the settings; **Check for updates** in the menu checks right away. When one is out, a notification says so and the menu shows **Update to <version>**: click it to download, verify and install it, and the app restarts. Each update must carry a valid signature from this project, otherwise it is not installed. If the update cannot be installed, e.g. when the app's folder is not writable, the release page opens to download it by hand.
 
 ### Linux: run from source
 
