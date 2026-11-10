@@ -21,6 +21,7 @@ pub fn range_error(min: i64, max: i64) -> String {
 pub enum FieldKind {
     Number { min: i64, max: i64 },
     Checklist,
+    Checkbox,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -31,7 +32,7 @@ pub struct Field {
     pub kind: FieldKind,
 }
 
-pub const FIELDS: [Field; 5] = [
+pub const FIELDS: [Field; 6] = [
     Field {
         name: "check_interval_minutes",
         label: "Check interval (minutes)",
@@ -62,6 +63,7 @@ pub const FIELDS: [Field; 5] = [
         help: "Unchecked devices are ignored",
         kind: FieldKind::Checklist,
     },
+    Field { name: "check_for_updates", label: "Check for updates automatically", help: "", kind: FieldKind::Checkbox },
 ];
 
 /// Error message per invalid field name.
@@ -74,6 +76,7 @@ pub struct Settings {
     pub critical_threshold: i64,
     pub renotify_minutes: i64,
     pub disabled_devices: BTreeSet<String>,
+    pub check_for_updates: bool,
 }
 
 impl Default for Settings {
@@ -84,6 +87,7 @@ impl Default for Settings {
             critical_threshold: 10,
             renotify_minutes: 60,
             disabled_devices: BTreeSet::new(),
+            check_for_updates: true,
         }
     }
 }
@@ -107,6 +111,21 @@ impl Settings {
             "critical_threshold" => self.critical_threshold = value,
             "renotify_minutes" => self.renotify_minutes = value,
             _ => panic!("Not a number setting: {name}"),
+        }
+    }
+
+    /// Value of a `FieldKind::Checkbox` field.
+    pub fn flag(&self, name: &str) -> Option<bool> {
+        match name {
+            "check_for_updates" => Some(self.check_for_updates),
+            _ => None,
+        }
+    }
+
+    pub fn set_flag(&mut self, name: &str, value: bool) {
+        match name {
+            "check_for_updates" => self.check_for_updates = value,
+            _ => panic!("Not a checkbox setting: {name}"),
         }
     }
 
@@ -170,6 +189,7 @@ impl Settings {
                 (FieldKind::Checklist, Value::Array(items)) if items.iter().all(Value::is_str) => {
                     settings.disabled_devices = items.iter().filter_map(Value::as_str).map(String::from).collect();
                 }
+                (FieldKind::Checkbox, Value::Boolean(value)) => settings.set_flag(field.name, *value),
                 _ => tracing::warn!("Invalid setting {}={value}, using default", field.name),
             }
         }
@@ -225,6 +245,7 @@ mod tests {
             check_interval_minutes: 5,
             low_threshold: 30,
             disabled_devices: ["Mouse".to_string(), "Headset".to_string()].into(),
+            check_for_updates: false,
             ..Settings::default()
         };
         settings.save_to(&path).unwrap();
@@ -248,6 +269,7 @@ mod tests {
             "check_interval_minutes = '5'",  // wrong type
             "check_interval_minutes = true", // bool is not an int
             "disabled_devices = 'Mouse'",    // not a list
+            "check_for_updates = 0",         // not a bool
         ] {
             let (_dir, path) = config_path();
             fs::write(&path, format!("low_threshold = 30\n{content}")).unwrap();

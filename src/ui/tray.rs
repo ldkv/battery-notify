@@ -305,12 +305,13 @@ fn open_settings(dialog_open: &Arc<AtomicBool>, settings: &SharedSettings, wake:
     });
 }
 
-/// Separate thread to look for a newer release, now and then every day.
-fn update_loop(platform: &Arc<dyn Platform>, proxy: &EventLoopProxy<UserEvent>) {
+/// Separate thread to look for a newer release, now and then every day, unless turned off in the settings.
+fn update_loop(platform: &Arc<dyn Platform>, settings: &SharedSettings, proxy: &EventLoopProxy<UserEvent>) {
     let mut notified: Option<String> = None;
     loop {
-        match updater::check() {
-            Ok(Some(update)) => {
+        match current(settings).check_for_updates.then(updater::check) {
+            None => tracing::info!("Automatic update checks are off"),
+            Some(Ok(Some(update))) => {
                 if notified.as_ref() != Some(&update.version) {
                     notify_update(platform.as_ref(), &update);
                     notified = Some(update.version.clone());
@@ -319,8 +320,8 @@ fn update_loop(platform: &Arc<dyn Platform>, proxy: &EventLoopProxy<UserEvent>) 
                     return; // the event loop has exited
                 }
             }
-            Ok(None) => tracing::info!("No update available"),
-            Err(e) => tracing::warn!("Could not check for updates: {e}"),
+            Some(Ok(None)) => tracing::info!("No update available"),
+            Some(Err(e)) => tracing::warn!("Could not check for updates: {e}"),
         }
         thread::sleep(UPDATE_CHECK_INTERVAL);
     }
@@ -404,17 +405,18 @@ fn start_background_loops(
     wake_receiver: Receiver<()>,
     proxy: &EventLoopProxy<UserEvent>,
 ) {
-    let (device_platform, settings, device_proxy) = (platform.clone(), settings.clone(), proxy.clone());
+    let (device_platform, device_settings, device_proxy) = (platform.clone(), settings.clone(), proxy.clone());
     let spawned = thread::Builder::new()
         .name("device_loop".to_string())
-        .spawn(move || device_loop(&device_platform, &settings, &wake_receiver, &device_proxy));
+        .spawn(move || device_loop(&device_platform, &device_settings, &wake_receiver, &device_proxy));
     if let Err(e) = spawned {
         tracing::error!("Could not start the device loop: {e}");
     }
     if cfg!(not(debug_assertions)) {
-        let (platform, proxy) = (platform.clone(), proxy.clone());
-        let spawned =
-            thread::Builder::new().name("update_check".to_string()).spawn(move || update_loop(&platform, &proxy));
+        let (platform, settings, proxy) = (platform.clone(), settings.clone(), proxy.clone());
+        let spawned = thread::Builder::new()
+            .name("update_check".to_string())
+            .spawn(move || update_loop(&platform, &settings, &proxy));
         if let Err(e) = spawned {
             tracing::error!("Could not start the update checks: {e}");
         }
