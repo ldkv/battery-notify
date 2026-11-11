@@ -99,18 +99,25 @@ impl HidProvider {
 
     /// Read the stored device, returned with the level when it answers. One that does not answer is searched again:
     /// it may have come back under a new path, e.g. after the computer slept, and the stored one would keep failing.
+    /// Its path is not read twice in a row, each read of a silent device costs its timeout.
     fn level(&self, device_type: &DeviceType, stored: Option<FoundDevice>) -> (Lookup, Option<FoundDevice>) {
+        let mut failed_path = None;
         if let Some(device) = stored {
             if let Some(level) = self.read_level(device_type, &device) {
                 return (Lookup::Found(Some(level)), Some(device));
             }
             tracing::info!("No answer from {}, searching it again", device_type.name);
+            failed_path = Some(device.path);
         }
         let candidates = self.candidates(device_type);
         if candidates.is_empty() {
             tracing::info!("Device not found: {}", device_type.name);
         }
-        let (lookup, answering) = first_answering(candidates, |device| self.read_level(device_type, device));
+        let (lookup, answering) = first_answering(
+            candidates,
+            |device| failed_path.as_ref() == Some(&device.path),
+            |device| self.read_level(device_type, device),
+        );
         if let Some(device) = &answering {
             tracing::info!("Device found for {}: {:?}", device_type.name, device.path);
         }
@@ -193,11 +200,19 @@ enum Lookup {
 
 /// Read each candidate in turn and return the first that answers, with its level. Several HID collections can
 /// match a device type, e.g. two receivers with the same VID/PID, only one of them paired with the device.
-fn first_answering<C>(candidates: Vec<C>, read: impl Fn(&C) -> Option<u8>) -> (Lookup, Option<C>) {
+/// Skipped candidates, known not to answer, are not read but still count as found.
+fn first_answering<C>(
+    candidates: Vec<C>,
+    skip: impl Fn(&C) -> bool,
+    read: impl Fn(&C) -> Option<u8>,
+) -> (Lookup, Option<C>) {
     if candidates.is_empty() {
         return (Lookup::NotFound, None);
     }
     for candidate in candidates {
+        if skip(&candidate) {
+            continue;
+        }
         if let Some(level) = read(&candidate) {
             return (Lookup::Found(Some(level)), Some(candidate));
         }
@@ -249,19 +264,34 @@ pub(crate) mod tests {
     #[test]
     fn first_answering_keeps_the_first_collection_that_answers() {
         // Candidates are indexes into `levels`; returns the lookup, the kept candidate and the ones read
-        let first_answering_of = |levels: &[Option<u8>]| {
-            let read = std::cell::RefCell::new(Vec::new());
-            let (lookup, answering) = first_answering((0..levels.len()).collect(), |index| {
-                read.borrow_mut().push(*index);
-                levels[*index]
-            });
-            (lookup, answering, read.into_inner())
-        };
+        let first_answering_of = |levels: &[Option<u8>]| first_answering_skipping(levels, None);
         // E.g. two receivers with the same VID/PID, the device paired with the second one
         assert_eq!(first_answering_of(&[None, Some(80), Some(42)]), (Lookup::Found(Some(80)), Some(1), vec![0, 1]));
         // E.g. the device is asleep: nothing is kept, the next read searches again
         assert_eq!(first_answering_of(&[None, None]), (Lookup::Found(None), None, vec![0, 1]));
         assert_eq!(first_answering_of(&[]), (Lookup::NotFound, None, vec![]));
+    }
+
+    /// `first_answering` on indexes into `levels`, skipping `skipped`: the lookup, the kept candidate and the ones read.
+    fn first_answering_skipping(levels: &[Option<u8>], skipped: Option<usize>) -> (Lookup, Option<usize>, Vec<usize>) {
+        let read = std::cell::RefCell::new(Vec::new());
+        let (lookup, answering) = first_answering(
+            (0..levels.len()).collect(),
+            |index| Some(*index) == skipped,
+            |index| {
+                read.borrow_mut().push(*index);
+                levels[*index]
+            },
+        );
+        (lookup, answering, read.into_inner())
+    }
+
+    #[test]
+    fn first_answering_does_not_read_the_path_that_just_failed_again() {
+        // E.g. the headset is off: found at the same path, which is not read again
+        assert_eq!(first_answering_skipping(&[None], Some(0)), (Lookup::Found(None), None, vec![]));
+        // E.g. after sleep, the device came back under a new path
+        assert_eq!(first_answering_skipping(&[None, Some(80)], Some(0)), (Lookup::Found(Some(80)), Some(1), vec![1]));
     }
 
     /// Two ends that each wait for the other: they only both return true when run at the same time. Waiting only
