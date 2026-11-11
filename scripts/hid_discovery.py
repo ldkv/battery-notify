@@ -5,9 +5,14 @@
 """
 Standalone script to debug HID devices and get battery status.
 
-    uv run scripts/hid_discovery.py
+    uv run scripts/hid_discovery.py                # Keychron Ultra-Link 8K
+    uv run scripts/hid_discovery.py 19F5 0         # every NuPhy device (PID 0 matches any)
+
+Vendor-defined interfaces other than the Keychron mouse one are only listened to:
+type, plug or unplug the charger meanwhile to catch status reports.
 """
 
+import argparse
 import logging
 import time
 
@@ -17,6 +22,8 @@ logger = logging.getLogger("hid_discovery")
 
 REPORT_SIZE = 64  # report ID + 63 bytes
 READ_TIMEOUT_MS = 1000
+LISTEN_SECONDS = 15
+VENDOR_USAGE_PAGE = 0xFF00  # vendor-defined usage pages are 0xFF00-0xFFFF
 
 
 def to_hex(data: list[int]) -> str:
@@ -70,6 +77,20 @@ def get_battery_report_mouse_method(device: hid.device) -> list[int]:
     return reply
 
 
+def listen(device: hid.device, seconds: int) -> None:
+    """Log every report the interface sends, without writing to it."""
+    logger.info(f"Listening for {seconds}s...")
+    deadline = time.monotonic() + seconds
+    while (remaining_ms := int((deadline - time.monotonic()) * 1000)) > 0:
+        try:
+            report = device.read(REPORT_SIZE + 1, min(remaining_ms, READ_TIMEOUT_MS))
+        except (OSError, ValueError) as e:
+            logger.error(f"Error hid_read: {e}")
+            return
+        if report:
+            logger.info(f"report ({len(report)} bytes): {to_hex(report)}")
+
+
 def enumerate_all_devices(VID: int, PID: int) -> list[int]:
     for device_info in hid.enumerate(VID, PID):
         device = open_device(device_info["path"])
@@ -80,6 +101,8 @@ def enumerate_all_devices(VID: int, PID: int) -> list[int]:
             device_info["report_descriptor"] = get_report_descriptor(device)
             logger.info(f"{device_info=}")
             if (device_info["usage_page"], device_info["usage"]) != (0xFFC1, 0x01):
+                if device_info["usage_page"] >= VENDOR_USAGE_PAGE:
+                    listen(device, LISTEN_SECONDS)
                 continue
 
             battery_report = get_battery_report_mouse_method(device)
@@ -93,7 +116,9 @@ def enumerate_all_devices(VID: int, PID: int) -> list[int]:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    VID: int = 0x3434  # Keychron vendor ID
-    PID: int = 0xD028  # Keychron Ultra-Link 8K product ID
-    battery_report = enumerate_all_devices(VID, PID)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("vid", nargs="?", type=lambda x: int(x, 16), default=0x3434, help="hex, default Keychron")
+    parser.add_argument("pid", nargs="?", type=lambda x: int(x, 16), default=0xD028, help="hex, default Ultra-Link 8K")
+    args = parser.parse_args()
+    battery_report = enumerate_all_devices(args.vid, args.pid)
     logger.info(f"{battery_report=}")
