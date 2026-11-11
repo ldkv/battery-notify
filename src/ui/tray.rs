@@ -6,7 +6,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use tao::event::{Event, StartCause};
-use tao::event_loop::{ControlFlow, EventLoopBuilder, EventLoopProxy};
+use tao::event_loop::{ControlFlow, DeviceEventFilter, EventLoop, EventLoopBuilder, EventLoopProxy};
 use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
 
@@ -69,14 +69,7 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
     platform.register_notifications();
 
     let settings: SharedSettings = Arc::new(Mutex::new(Settings::load()));
-    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
-    let mut event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
-    // No Dock icon: the app lives in the menu bar
-    #[cfg(target_os = "macos")]
-    tao::platform::macos::EventLoopExtMacOS::set_activation_policy(
-        &mut event_loop,
-        tao::platform::macos::ActivationPolicy::Accessory,
-    );
+    let event_loop = build_event_loop();
     let proxy = event_loop.create_proxy();
     let menu_proxy = proxy.clone();
     MenuEvent::set_event_handler(Some(move |event| {
@@ -166,6 +159,21 @@ pub fn run(platform: Arc<dyn Platform>) -> ! {
             _ => {}
         }
     })
+}
+
+fn build_event_loop() -> EventLoop<UserEvent> {
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
+    let mut event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
+    // No Dock icon: the app lives in the menu bar
+    #[cfg(target_os = "macos")]
+    tao::platform::macos::EventLoopExtMacOS::set_activation_policy(
+        &mut event_loop,
+        tao::platform::macos::ActivationPolicy::Accessory,
+    );
+    // No raw keyboard and mouse input, unused: on Windows, a Bluetooth keyboard turned on or off while the tray menu
+    // was open froze the menu and Explorer for about 40s
+    event_loop.set_device_event_filter(DeviceEventFilter::Always);
+    event_loop
 }
 
 fn tray_icon(image: IconImage) -> Option<Icon> {
