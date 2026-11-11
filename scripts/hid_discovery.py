@@ -10,6 +10,9 @@ Standalone script to debug HID devices and get battery status.
 
 Vendor-defined interfaces other than the Keychron mouse one are only listened to:
 type, plug or unplug the charger meanwhile to catch status reports.
+
+--probe-cz also sends, once, the status read of Mchose's 2.4 GHz dongle to 0xFF31/0x74 interfaces
+(evren-oct/vigil-watt#104): the reply starts with AA 05, its data at byte 0x20 holds the battery.
 """
 
 import argparse
@@ -24,6 +27,9 @@ REPORT_SIZE = 64  # report ID + 63 bytes
 READ_TIMEOUT_MS = 1000
 LISTEN_SECONDS = 15
 VENDOR_USAGE_PAGE = 0xFF00  # vendor-defined usage pages are 0xFF00-0xFFFF
+CZ_INTERFACE = (0xFF31, 0x74)
+CZ_STATUS_READ = [0x55, 0x05, 0x00, 0x38, 0x38, 0x00, 0x00, 0x00]  # read 0x38 bytes at offset 0
+CZ_LISTEN_SECONDS = 5
 
 
 def to_hex(data: list[int]) -> str:
@@ -91,7 +97,17 @@ def listen(device: hid.device, seconds: int) -> None:
             logger.info(f"report ({len(report)} bytes): {to_hex(report)}")
 
 
-def enumerate_all_devices(VID: int, PID: int) -> list[int]:
+def probe_cz(device: hid.device) -> None:
+    """Send the Mchose status read once and log the replies."""
+    message = [0] + CZ_STATUS_READ + [0] * (REPORT_SIZE - len(CZ_STATUS_READ))  # leading report ID 0
+    logger.info(f"Sending CZ status read: {to_hex(message)}")
+    if device.write(message) < 0:
+        logger.error(f"Error hid_write: {device.error()}")
+        return
+    listen(device, CZ_LISTEN_SECONDS)
+
+
+def enumerate_all_devices(VID: int, PID: int, probe: bool) -> list[int]:
     for device_info in hid.enumerate(VID, PID):
         device = open_device(device_info["path"])
         if not device:
@@ -101,7 +117,9 @@ def enumerate_all_devices(VID: int, PID: int) -> list[int]:
             device_info["report_descriptor"] = get_report_descriptor(device)
             logger.info(f"{device_info=}")
             if (device_info["usage_page"], device_info["usage"]) != (0xFFC1, 0x01):
-                if device_info["usage_page"] >= VENDOR_USAGE_PAGE:
+                if probe and (device_info["usage_page"], device_info["usage"]) == CZ_INTERFACE:
+                    probe_cz(device)
+                elif device_info["usage_page"] >= VENDOR_USAGE_PAGE:
                     listen(device, LISTEN_SECONDS)
                 continue
 
@@ -119,6 +137,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("vid", nargs="?", type=lambda x: int(x, 16), default=0x3434, help="hex, default Keychron")
     parser.add_argument("pid", nargs="?", type=lambda x: int(x, 16), default=0xD028, help="hex, default Ultra-Link 8K")
+    parser.add_argument("--probe-cz", action="store_true", help="send the Mchose status read, see above")
     args = parser.parse_args()
-    battery_report = enumerate_all_devices(args.vid, args.pid)
+    battery_report = enumerate_all_devices(args.vid, args.pid, args.probe_cz)
     logger.info(f"{battery_report=}")
