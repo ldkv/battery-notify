@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use crate::core::extra_devices;
 use crate::core::paths::seen_devices_file;
@@ -22,10 +23,12 @@ impl Poller {
     }
 
     pub fn poll(&mut self, settings: &Settings) -> Vec<BatteryReading> {
+        let start = Instant::now();
         let readings: Vec<_> = read_parallel(self.providers.iter_mut(), |provider| provider.read(settings))
             .into_iter()
             .flatten()
             .collect();
+        tracing::info!("Checked {} devices in {:.2?}", readings.len(), start.elapsed());
         remember_devices(&self.seen_devices_file, readings.iter().map(|reading| reading.name.clone()).collect());
         readings
     }
