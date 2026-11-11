@@ -58,7 +58,7 @@ impl HidIo for HidDevice {
 }
 
 /// Reads the battery level of an opened device, None when it does not answer.
-pub trait Driver: Send {
+pub trait Driver: Send + Sync {
     fn battery_level(&self, device: &dyn HidIo) -> Option<u8>;
 }
 
