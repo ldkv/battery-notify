@@ -8,15 +8,9 @@ A tray app for Windows and macOS that watches the battery of your wireless devic
 - Hover the icon or right-click it to see the level of each device. Left-click it to check right away.
 - A notification shows when a device runs low, and repeats while it stays low (configurable).
 
-<!-- Screenshots to add, then uncomment the lines below:
-     - docs/images/tray-tooltip.png: the tray icon hovered, its tooltip listing each device's level (Windows)
-     - docs/images/tray-menu.png: the tray menu opened with right-click, with a few devices listed (Windows)
-     - docs/images/notification.png: a low battery notification (Windows)
-
-| Tray icon | Menu | Notification |
-| --- | --- | --- |
+| Tray icon                                                   | Menu                                    | Notification                                              |
+| ----------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------- |
 | ![Tray icon with its tooltip](docs/images/tray-tooltip.png) | ![Tray menu](docs/images/tray-menu.png) | ![Low battery notification](docs/images/notification.png) |
--->
 
 ## Install
 
@@ -61,7 +55,7 @@ The app lives in the menu bar, without a Dock icon. Bluetooth devices are only s
 
 ### Updates
 
-The app checks for a new release when it starts and then once a day, unless **Automatically check for updates** is off in the settings; **Check for updates** in the menu checks right away. When one is out, a notification says so and the menu shows **Update to <version>**: click it to download, verify and install it, and the app restarts. Each update must carry a valid signature from this project, otherwise it is not installed. If the update cannot be installed, e.g. when the app's folder is not writable, the release page opens to download it by hand.
+The app checks for a new release when it starts and then once a day, unless **Automatically check for updates** is off in the settings; **Check for updates** in the menu checks right away. When one is out, a notification says so and the menu shows **Update to <version>**: click it to download, verify and install it, and the app restarts. If the update cannot be installed, e.g. when the app's folder is not writable, the release page opens to download it by hand.
 
 ### Linux: run from source
 
@@ -69,11 +63,11 @@ There is no release for Linux, which is untested. Build it from source, see [Dev
 
 ## Settings
 
+Right-click the tray icon → **Settings…** to access the Settings menu.
+
 <p align="center">
   <img src="docs/images/settings-windows.png" alt="Settings dialog on Windows" width="360">
 </p>
-
-Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, how often the low battery notification repeats, which devices are checked, whether the app runs at startup, and whether it checks for updates once a day.
 
 Settings are saved to `config.toml` and logs to `Logs/battery_notifier_rust.<date>.log`, both in the settings folder (**Open settings folder** in the settings dialog): `%LOCALAPPDATA%\battery-notifier` on Windows, `~/Library/Application Support/battery-notifier` on macOS and `~/.config/battery-notifier` on Linux.
 
@@ -131,15 +125,11 @@ CI builds the Windows executable on each pull request, and the macOS app on `mai
 
 ### Updates
 
-The app updates itself from GitHub releases (`src/updater.rs`): it finds the release zip for its platform, checks its signature against `updater-key.pub`, then installs it and restarts with `--after-update`, which waits for the previous version to exit. On Windows, the zip holds `battery_notifier_rust-<version>.exe`: the updater copies it next to the running exe, which cannot be overwritten, and starts it with `--after-update <previous exe>` so that it deletes the previous version; Run at startup is pointed to the exe on each start. On macOS, it replaces the whole `.app` bundle. Development builds do not check for updates.
+The app updates itself from GitHub releases (`src/updater.rs`): it finds the release zip for its platform, checks its signature against `updater-key.pub`, then installs it and restarts with `--after-update`, which waits for the previous version to exit.
 
-The release workflow signs each zip with [zipsign](https://github.com/Kijewski/zipsign), for its file name, using the `ZIPSIGN_PRIVATE_KEY` repository secret, then verifies it against `updater-key.pub`. To create or replace the key pair:
+On Windows, the zip holds `battery_notifier_rust-<version>.exe`: the updater copies it next to the running exe, which cannot be overwritten, and starts it with `--after-update <previous exe>` so that it deletes the previous version; Run at startup is pointed to the exe on each start. On macOS, it replaces the whole `.app` bundle. Development builds do not check for updates.
 
-```sh
-cargo install zipsign --locked
-zipsign gen-key priv.key updater-key.pub
-base64 -w0 priv.key   # save as the ZIPSIGN_PRIVATE_KEY repository secret, then delete priv.key
-```
+The release workflow signs each zip with [zipsign](https://github.com/Kijewski/zipsign), for its file name, using the `ZIPSIGN_PRIVATE_KEY` repository secret, then verifies it against `updater-key.pub`.
 
 Apps only accept updates signed by the key they were built with: after replacing the key, released apps cannot update to the next version and need a manual download.
 
