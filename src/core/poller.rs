@@ -1,10 +1,11 @@
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use crate::core::extra_devices;
 use crate::core::paths::seen_devices_file;
-use crate::core::providers::{BatteryProvider, BatteryReading};
+use crate::core::providers::{BatteryProvider, BatteryReading, read_parallel};
 use crate::core::settings::Settings;
 
 pub struct Poller {
@@ -22,7 +23,12 @@ impl Poller {
     }
 
     pub fn poll(&mut self, settings: &Settings) -> Vec<BatteryReading> {
-        let readings: Vec<_> = self.providers.iter_mut().flat_map(|provider| provider.read(settings)).collect();
+        let start = Instant::now();
+        let readings: Vec<_> = read_parallel(self.providers.iter_mut(), |provider| provider.read(settings))
+            .into_iter()
+            .flatten()
+            .collect();
+        tracing::info!("Checked {} devices in {:.2?}", readings.len(), start.elapsed());
         remember_devices(&self.seen_devices_file, readings.iter().map(|reading| reading.name.clone()).collect());
         readings
     }
@@ -59,6 +65,7 @@ pub fn known_device_names(settings: &Settings, seen_devices_file: &Path, extra_d
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::providers::tests::{Handshake, handshake};
 
     struct FakeProvider(Vec<BatteryReading>);
 
@@ -93,6 +100,26 @@ mod tests {
 
         assert_eq!(readings, [mouse, headset]);
         assert_eq!(load_seen_devices(&path), names(&["Mouse", "Headset"]));
+    }
+
+    struct HandshakeProvider(Handshake);
+
+    impl BatteryProvider for HandshakeProvider {
+        fn read(&mut self, _settings: &Settings) -> Vec<BatteryReading> {
+            vec![reading("Device", self.0.meet().then_some(50))]
+        }
+    }
+
+    #[test]
+    fn poll_reads_providers_in_parallel() {
+        let dir = tempfile::tempdir().unwrap();
+        let providers: Vec<Box<dyn BatteryProvider>> =
+            handshake().into_iter().map(|end| Box::new(HandshakeProvider(end)) as Box<dyn BatteryProvider>).collect();
+
+        let readings =
+            Poller::with_seen_devices_file(providers, dir.path().join("seen_devices.json")).poll(&Settings::default());
+
+        assert_eq!(readings, [reading("Device", Some(50)), reading("Device", Some(50))]);
     }
 
     #[test]
