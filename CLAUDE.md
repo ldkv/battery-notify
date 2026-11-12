@@ -7,6 +7,8 @@ Windows and macOS tray app showing the battery level of HID and Bluetooth device
 - `src/core/`: pure logic (devices, providers, poller, policy, settings), no GUI and no OS calls, so it stays testable on Linux and reusable by a future headless mode.
 - `src/platforms/`: one module per OS behind the `Platform` trait, whose defaults are the unsupported-OS fallback. Reach OS code only through `current_platform()`.
 - `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, `egui` settings dialog.
+- A check reads the providers in parallel, and the HID device types too, except those with the same VID/PID (one receiver): read one after the other, their replies could mix. Searching and opening HID devices stay behind one mutex: hidapi keeps a failed open's error in a global string that two concurrent failures would free twice.
+- The tray turns off `tao`'s device events (`DeviceEventFilter::Always`): registered for raw keyboard and mouse input, the app froze its open menu and Explorer on Windows when an input device was turned on or off.
 - The settings dialog runs in its own process (`battery-notifier settings`); exit code 0 means saved, and the tray then reloads `config.toml`. The tray holds the dialog's stdin (`--close-with-tray`): the dialog closes when the tray quits, and comes to the front on each line the tray writes when Settings is clicked again.
 - A setting is one entry of `FIELDS` in `src/core/settings.rs`; the dialog is generated from it. Supported kinds are in `FieldKind`.
 - Settings, the seen devices file and the single-instance lock keep the paths of earlier releases, so updates keep the user's files. Non-Windows single instance is a `flock` on `<state_dir>/<name>.lock`.

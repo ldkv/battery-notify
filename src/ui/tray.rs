@@ -170,8 +170,8 @@ fn build_event_loop() -> EventLoop<UserEvent> {
         &mut event_loop,
         tao::platform::macos::ActivationPolicy::Accessory,
     );
-    // No raw keyboard and mouse input, unused: on Windows, a Bluetooth keyboard turned on or off while the tray menu
-    // was open froze the menu and Explorer for about 40s
+    // No raw keyboard and mouse input, unused: on Windows, an input device (e.g. a Bluetooth keyboard) turned on or off
+    // while the tray menu was open froze the menu and Explorer for about 40s
     event_loop.set_device_event_filter(DeviceEventFilter::Always);
     event_loop
 }
