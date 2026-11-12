@@ -2,7 +2,7 @@
 name = "battery-notifier"
 version = "0.7.0"
 edition = "2024"
-description = "Notify when battery is low"
+description = "Tray app showing the battery level of wireless HID and Bluetooth devices, with low battery notifications"
 license = "MIT"
 publish = false
 

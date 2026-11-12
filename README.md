@@ -2,11 +2,21 @@
 
 ## About
 
-A Windows tray app that watches the battery of your wireless devices:
+A tray app for Windows and macOS that watches the battery of your wireless devices: mice, keyboards, headsets and controllers over their USB receiver, and Bluetooth devices on Windows.
 
 - The tray icon shows the lowest battery level, following the taskbar theme, amber when low and red when critical.
-- Hover the icon or right-click it to see the level of each device.
+- Hover the icon or right-click it to see the level of each device. Left-click it to check right away.
 - A notification shows when a device runs low, and repeats while it stays low (configurable).
+
+<!-- Screenshots to add, then uncomment the lines below:
+     - docs/images/tray-tooltip.png: the tray icon hovered, its tooltip listing each device's level (Windows)
+     - docs/images/tray-menu.png: the tray menu opened with right-click, with a few devices listed (Windows)
+     - docs/images/notification.png: a low battery notification (Windows)
+
+| Tray icon | Menu | Notification |
+| --- | --- | --- |
+| ![Tray icon with its tooltip](docs/images/tray-tooltip.png) | ![Tray menu](docs/images/tray-menu.png) | ![Low battery notification](docs/images/notification.png) |
+-->
 
 ## Install
 
@@ -58,6 +68,8 @@ The app checks for a new release when it starts and then once a day, unless **Au
 There is no release for Linux, which is untested. Build it from source, see [Development](#development).
 
 ## Settings
+
+<img src="docs/images/settings-windows.png" alt="Settings dialog on Windows" width="360">
 
 Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, how often the low battery notification repeats, which devices are checked, whether the app runs at startup, and whether it checks for updates once a day.
 
@@ -136,4 +148,4 @@ Apps only accept updates signed by the key they were built with: after replacing
 - `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, settings dialog (`egui`, in its own process).
 - `assets/`: the app icon, see `scripts/render_app_icon.py`.
 
-A new device is a `DeviceType` in `src/core/devices/`, added to `HID_DEVICES`.
+A new device is a `DeviceType` in `src/core/devices/`, added to `HID_DEVICES`. Each check reads the devices in parallel, except those with the same VID/PID (e.g. behind one receiver), read one after the other.

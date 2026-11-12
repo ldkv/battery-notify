@@ -7,6 +7,8 @@ fn main() {
     {
         let mut resource = winresource::WindowsResource::new();
         resource.set_icon("assets/app-icon.ico");
+        // Shown as the app name in Task Manager, which otherwise takes the package description
+        resource.set("FileDescription", "Battery Notifier");
         resource.compile().expect("compile the Windows resources");
     }
 }
