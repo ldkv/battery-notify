@@ -53,9 +53,13 @@ pub fn bluetooth_batteries() -> Vec<(String, u8)> {
 
 #[cfg(windows)]
 mod winrt {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
     use windows::Devices::Enumeration::{DeviceInformation, DeviceInformationKind};
     use windows::Foundation::IPropertyValue;
-    use windows::core::{HSTRING, Interface, Result};
+    use windows::Win32::Foundation::ERROR_TIMEOUT;
+    use windows::core::{Error, HRESULT, HSTRING, Interface, Result};
 
     use super::{BATTERY_KEY, BLUETOOTH_DEVICES, CONNECTED_KEY, connected_device_names, match_batteries};
 
@@ -67,6 +71,9 @@ mod winrt {
         Ok(match_batteries(&names, &batteries))
     }
 
+    /// A query usually takes 0.2s, but can hang for about 40s while a Bluetooth device connects or disconnects.
+    const QUERY_TIMEOUT: Duration = Duration::from_secs(5);
+
     /// Name and property value of the device nodes that have the property.
     fn find_devices<T>(
         aqs_filter: &str,
@@ -74,12 +81,21 @@ mod winrt {
         unbox: impl Fn(&IPropertyValue) -> Result<T>,
     ) -> Result<Vec<(String, T)>> {
         let properties: Vec<HSTRING> = vec![key.into()];
-        let devices = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
+        let query = DeviceInformation::FindAllAsyncWithKindAqsFilterAndAdditionalProperties(
             &aqs_filter.into(),
             &windows_collections::IIterable::from(properties),
             DeviceInformationKind::Device,
-        )?
-        .join()?;
+        )?;
+        let (sender, receiver) = mpsc::channel();
+        query.when(move |devices| {
+            let _ = sender.send(devices);
+        })?;
+        let Ok(devices) = receiver.recv_timeout(QUERY_TIMEOUT) else {
+            let _ = query.Cancel();
+            let message = format!("Device query timed out after {}s", QUERY_TIMEOUT.as_secs());
+            return Err(Error::new(HRESULT::from_win32(ERROR_TIMEOUT.0), message));
+        };
+        let devices = devices?;
         let key = HSTRING::from(key);
         let mut found = Vec::new();
         for device in devices {
