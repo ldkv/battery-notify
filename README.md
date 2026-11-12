@@ -69,7 +69,9 @@ There is no release for Linux, which is untested. Build it from source, see [Dev
 
 ## Settings
 
-<img src="docs/images/settings-windows.png" alt="Settings dialog on Windows" width="360">
+<p align="center">
+  <img src="docs/images/settings-windows.png" alt="Settings dialog on Windows" width="360">
+</p>
 
 Right-click the tray icon → **Settings…** to change the check interval, the low and critical battery levels, how often the low battery notification repeats, which devices are checked, whether the app runs at startup, and whether it checks for updates once a day.
 
