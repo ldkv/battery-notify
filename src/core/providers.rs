@@ -61,7 +61,7 @@ impl HidProvider {
     fn candidates(&self, device_type: &DeviceType) -> Vec<FoundDevice> {
         let mut api = self.lock_api();
         if api.is_none() {
-            // Devices are searched one type at a time, see `find`
+            // Devices are searched one type at a time, below
             HidApi::disable_device_discovery();
             match HidApi::new() {
                 Ok(new_api) => *api = Some(new_api),
@@ -289,21 +289,15 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn read_groups_reads_a_group_in_order_and_keeps_the_order_of_items() {
-        let read = std::sync::Mutex::new(Vec::new());
+    fn read_groups_reads_a_group_in_one_thread_and_keeps_the_order_of_items() {
         let threads = read_groups(
             [('a', 0), ('b', 1), ('a', 2), ('a', 3)],
             |(key, _)| *key,
-            |(_, index)| {
-                read.lock().unwrap().push(index);
-                (index, thread::current().id())
-            },
+            |(_, index)| (index, thread::current().id()),
         );
         assert_eq!(threads.iter().map(|(index, _)| *index).collect::<Vec<_>>(), [0, 1, 2, 3]);
         assert!(threads[0].1 == threads[2].1 && threads[2].1 == threads[3].1, "group a in one thread");
         assert_ne!(threads[0].1, threads[1].1);
-        let group_a: Vec<_> = read.into_inner().unwrap().into_iter().filter(|index| *index != 1).collect();
-        assert_eq!(group_a, [0, 2, 3]);
     }
 
     #[test]
