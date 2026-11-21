@@ -16,8 +16,8 @@ import hid
 logger = logging.getLogger("logitech_probe")
 
 LOGITECH_VID = 0x046D
-HIDPP_USAGE_PAGE = 0xFF00
-HIDPP_LONG_USAGE = 0x02
+# Older receivers: 0xFF00, newer ones (e.g. C54F): 0xFF43
+HIDPP_USAGE_PAGES = (0xFF00, 0xFF43)
 LONG_REPORT_ID = 0x11
 LONG_REPORT_SIZE = 20
 SOFTWARE_ID = 0x0A
@@ -125,9 +125,12 @@ def main() -> None:
             f"interface={info['interface_number']} bus={info.get('bus_type')} path={info['path']!r}"
         )
     for info in infos:
-        if (info["usage_page"], info["usage"]) != (HIDPP_USAGE_PAGE, HIDPP_LONG_USAGE):
+        if info["usage_page"] not in HIDPP_USAGE_PAGES:
             continue
-        logger.info(f"=== Probing {info['vendor_id']:04X}:{info['product_id']:04X} {info['product_string']!r}")
+        logger.info(
+            f"=== Probing {info['vendor_id']:04X}:{info['product_id']:04X} {info['product_string']!r} "
+            f"usage_page={info['usage_page']:#06x} usage={info['usage']:#04x}"
+        )
         device = hid.device()
         try:
             device.open_path(info["path"])
@@ -135,6 +138,10 @@ def main() -> None:
             logger.warning(f"Cannot open: {e}")
             continue
         try:
+            try:
+                logger.info(f"report descriptor: {to_hex(device.get_report_descriptor())}")
+            except (OSError, ValueError) as e:
+                logger.warning(f"Cannot read the report descriptor: {e}")
             for index in DEVICE_INDEXES:
                 probe_index(device, index)
         finally:
