@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.12"
+# requires-python = ">=3.12,<3.15"  # hidapi 0.15.0 has wheels up to 3.14
 # dependencies = ["hidapi==0.15.0"]
 # ///
 """
