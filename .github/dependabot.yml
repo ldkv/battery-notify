@@ -12,6 +12,10 @@ updates:
       - dependency-name: "windows-collections"
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]
+      # Must match the version `egui_software_backend` depends on (see Cargo.toml).
+      - dependency-name: "egui"
+        update-types:
+          ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

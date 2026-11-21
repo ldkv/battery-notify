@@ -19,6 +19,8 @@ use crate::ui::icon::app_icon;
 
 const TITLE: &str = "Battery Notifier settings";
 const WIDTH: f32 = 460.0;
+/// Until the window fits its content
+const HEIGHT: f32 = 400.0;
 const PADDING: i8 = 20;
 const ROW_GAP: f32 = 12.0;
 const NUMBER_WIDTH: f32 = 64.0;
@@ -129,7 +131,12 @@ impl SettingsDialog {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                 let response = ui.add(TextEdit::singleline(text).desired_width(NUMBER_WIDTH));
                 if invalid {
-                    ui.painter().rect_stroke(response.rect, 2.0, Stroke::new(1.5, error_color), StrokeKind::Outside);
+                    ui.painter().rect_stroke(
+                        response.rect,
+                        2.0,
+                        Stroke::new(1.5_f32, error_color),
+                        StrokeKind::Outside,
+                    );
                 }
             });
         });
@@ -143,9 +150,9 @@ impl egui_software_backend::App for SettingsDialog {
         let colors = (ERROR_COLORS[usize::from(self.dark)], CAPTION_COLORS[usize::from(self.dark)]);
         let (_, errors) = self.form.edited_settings();
 
-        let content = CentralPanel::default().frame(egui::Frame::central_panel(ui.style()).inner_margin(PADDING)).show(
-            ui,
-            |ui| {
+        let content = CentralPanel::default()
+            .frame(egui::Frame::central_panel(ui.style()).inner_margin(PADDING))
+            .show_inside(ui, |ui| {
                 for (field, text) in &mut self.form.numbers {
                     Self::number_row(ui, field, text, errors.contains_key(field.name), colors);
                 }
@@ -186,8 +193,7 @@ impl egui_software_backend::App for SettingsDialog {
                         }
                     });
                 });
-            },
-        );
+            });
 
         if ctx.input(|input| input.key_pressed(Key::Enter)) {
             self.save_settings(&ctx);
@@ -217,15 +223,18 @@ impl egui_software_backend::App for SettingsDialog {
 pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: bool) -> bool {
     let mut viewport = ViewportBuilder::default()
         .with_title(TITLE)
-        .with_inner_size([WIDTH, 400.0])
+        .with_inner_size([WIDTH, HEIGHT])
         .with_resizable(false)
         .with_maximize_button(false);
+    if let Some([left, top, width, height]) = platform.work_area() {
+        viewport = viewport.with_position([left + (width - WIDTH) / 2.0, top + (height - HEIGHT) / 2.0]);
+    }
     if let Some(icon) = app_icon() {
         viewport = viewport.with_icon(icon);
     } else {
         tracing::warn!("Invalid app icon");
     }
-    let options = SoftwareBackendAppConfiguration::new().viewport_builder(viewport).centered(true);
+    let options = SoftwareBackendAppConfiguration::new().viewport_builder(viewport);
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
     let device_names = known_device_names(&settings, &seen_devices_file(), &extra_devices_file());

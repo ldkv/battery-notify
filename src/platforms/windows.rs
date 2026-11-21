@@ -3,9 +3,13 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{fs, io};
 
-use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError};
+use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, RECT};
 use windows::Win32::System::Console::{ATTACH_PARENT_PROCESS, AttachConsole};
 use windows::Win32::System::Threading::CreateMutexW;
+use windows::Win32::UI::HiDpi::GetDpiForSystem;
+use windows::Win32::UI::WindowsAndMessaging::{
+    SPI_GETWORKAREA, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+};
 use windows::core::HSTRING;
 use windows_registry::CURRENT_USER;
 
@@ -68,6 +72,22 @@ impl Platform for WindowsPlatform {
 
     fn taskbar_uses_dark_theme(&self) -> bool {
         is_dark_theme("SystemUsesLightTheme")
+    }
+
+    #[allow(unsafe_code, clippy::cast_precision_loss)]
+    fn work_area(&self) -> Option<[f32; 4]> {
+        let mut area = RECT::default();
+        // SAFETY: plain Win32 calls, SPI_GETWORKAREA writes one RECT into `area`.
+        let dpi = unsafe {
+            let area = std::ptr::from_mut(&mut area).cast();
+            SystemParametersInfoW(SPI_GETWORKAREA, 0, Some(area), SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0)).ok()?;
+            GetDpiForSystem()
+        };
+        // Physical pixels in a DPI-aware process, else already scaled to 96 DPI, where GetDpiForSystem returns 96
+        let scale = 96.0 / dpi.max(1) as f32;
+        let [left, top, right, bottom] =
+            [area.left, area.top, area.right, area.bottom].map(|value| value as f32 * scale);
+        Some([left, top, right - left, bottom - top])
     }
 
     fn icon_font(&self) -> Option<PathBuf> {
