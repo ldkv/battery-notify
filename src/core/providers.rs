@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread;
 
-use hidapi::{BusType, HidApi};
+#[cfg(target_os = "macos")]
+use hidapi::HidError;
+use hidapi::{BusType, HidApi, HidResult};
 
 use crate::core::devices::{DeviceType, Driver};
 use crate::core::extra_devices;
@@ -63,7 +65,7 @@ impl HidProvider {
         if api.is_none() {
             // Devices are searched one type at a time, below
             HidApi::disable_device_discovery();
-            match HidApi::new() {
+            match new_api() {
                 Ok(new_api) => *api = Some(new_api),
                 Err(e) => tracing::error!("Error initializing hidapi: {e}"),
             }
@@ -148,6 +150,30 @@ impl BatteryProvider for HidProvider {
             })
             .collect()
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn new_api() -> HidResult<HidApi> {
+    HidApi::new()
+}
+
+/// hidapi schedules its macOS device manager on the run loop of the thread that initializes it, and adds every
+/// device that appears later to that run loop. Initialized in a check's thread, which ends with the check, the
+/// first device to appear afterwards, e.g. on wake from sleep, crashed the app: initialize it on a thread that
+/// lives as long as the app.
+#[cfg(target_os = "macos")]
+fn new_api() -> HidResult<HidApi> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    thread::Builder::new()
+        .name("hidapi".to_string())
+        .spawn(move || {
+            let _ = sender.send(HidApi::new());
+            loop {
+                thread::park();
+            }
+        })
+        .map_err(|error| HidError::IoError { error })?;
+    receiver.recv().unwrap_or(Err(HidError::InitializationError))
 }
 
 /// Run `read` on every item, each in its own thread. The results are in the order of `items`.

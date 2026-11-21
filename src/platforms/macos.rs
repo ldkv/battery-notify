@@ -122,7 +122,7 @@ fn launch_agent_file() -> io::Result<PathBuf> {
     Ok(home.join("Library/LaunchAgents").join(format!("{LAUNCH_AGENT_LABEL}.plist")))
 }
 
-/// Start `exe` at login.
+/// Start `exe` at login, and again if it crashes: not after Quit, which exits successfully.
 fn launch_agent_plist(exe: &Path) -> String {
     let exe = exe.display().to_string().replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     format!(
@@ -138,6 +138,11 @@ fn launch_agent_plist(exe: &Path) -> String {
     </array>
     <key>RunAtLoad</key>
     <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
 </dict>
 </plist>
 "#
@@ -164,5 +169,8 @@ mod tests {
         );
         assert!(plist.contains(&format!("<string>{LAUNCH_AGENT_LABEL}</string>")));
         assert!(plist.contains("<key>RunAtLoad</key>\n    <true/>"));
+        assert!(
+            plist.contains("<key>KeepAlive</key>\n    <dict>\n        <key>SuccessfulExit</key>\n        <false/>")
+        );
     }
 }
