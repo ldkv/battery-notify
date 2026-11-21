@@ -49,6 +49,11 @@ pub trait Platform: Send + Sync {
         false
     }
 
+    /// The primary screen without the taskbar, in logical pixels: left, top, width, height.
+    fn work_area(&self) -> Option<[f32; 4]> {
+        None
+    }
+
     /// Font with the Segoe battery glyphs, None to draw the tray icon instead.
     fn icon_font(&self) -> Option<PathBuf> {
         None

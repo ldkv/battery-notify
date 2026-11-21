@@ -50,7 +50,7 @@ Apps only accept updates signed by the key they were built with: after replacing
 
 - `src/core/`: devices, providers, poller, notification policy, settings. No GUI.
 - `src/platforms/`: the `Platform` trait, whose defaults are the unsupported-OS fallback, the Windows implementation (registry, mutex, WinRT Bluetooth) and the macOS one (UserNotifications, LaunchAgent).
-- `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, settings dialog (`egui`, in its own process).
+- `src/ui/`: tray icon and menu (`tray-icon` on a `tao` event loop), icon renderer, settings dialog (`egui`, drawn on the CPU, in its own process).
 - `assets/`: the app icon, see `scripts/render_app_icon.py`.
 
 A new device is a `DeviceType` in `src/core/devices/`, added to `HID_DEVICES`. Each check reads the devices in parallel, except those with the same VID/PID (e.g. behind one receiver), read one after the other.

@@ -132,6 +132,13 @@ impl IconRenderer for DrawnIconRenderer {
     }
 }
 
+/// The app icon as straight RGBA pixels, for windows.
+pub fn app_icon() -> Option<egui::IconData> {
+    let pixmap = Pixmap::decode_png(APP_ICON_PNG).ok()?;
+    let rgba = pixmap.pixels().iter().flat_map(|pixel| straight_rgba(*pixel)).collect();
+    Some(egui::IconData { rgba, width: pixmap.width(), height: pixmap.height() })
+}
+
 fn straight_rgba(pixel: tiny_skia::PremultipliedColorU8) -> [u8; 4] {
     let color = pixel.demultiply();
     [color.red(), color.green(), color.blue(), color.alpha()]
@@ -218,7 +225,7 @@ mod tests {
 
     #[test]
     fn app_icon() {
-        let icon = eframe::icon_data::from_png_bytes(APP_ICON_PNG).unwrap();
+        let icon = super::app_icon().unwrap();
         assert_eq!((icon.width, icon.height), (256, 256));
     }
 }

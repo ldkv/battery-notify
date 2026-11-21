@@ -5,19 +5,22 @@ use std::io::BufRead;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use eframe::egui::{
-    self, Button, CentralPanel, Color32, Key, RichText, Stroke, StrokeKind, TextEdit, Theme, ViewportBuilder,
-    ViewportCommand,
+use egui::{
+    Button, CentralPanel, Color32, Key, RichText, Stroke, StrokeKind, TextEdit, Theme, ViewportBuilder, ViewportCommand,
 };
+
+use egui_software_backend::{SoftwareBackend, SoftwareBackendAppConfiguration, run_app_with_software_backend};
 
 use crate::core::paths::{config_dir, extra_devices_file, seen_devices_file};
 use crate::core::poller::known_device_names;
 use crate::core::settings::{Errors, FIELDS, Field, FieldKind, Settings};
 use crate::platforms::Platform;
-use crate::ui::icon::APP_ICON_PNG;
+use crate::ui::icon::app_icon;
 
 const TITLE: &str = "Battery Notifier settings";
 const WIDTH: f32 = 460.0;
+/// Until the window fits its content
+const HEIGHT: f32 = 400.0;
 const PADDING: i8 = 20;
 const ROW_GAP: f32 = 12.0;
 const NUMBER_WIDTH: f32 = 64.0;
@@ -128,7 +131,12 @@ impl SettingsDialog {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                 let response = ui.add(TextEdit::singleline(text).desired_width(NUMBER_WIDTH));
                 if invalid {
-                    ui.painter().rect_stroke(response.rect, 2.0, Stroke::new(1.5, error_color), StrokeKind::Outside);
+                    ui.painter().rect_stroke(
+                        response.rect,
+                        2.0,
+                        Stroke::new(1.5_f32, error_color),
+                        StrokeKind::Outside,
+                    );
                 }
             });
         });
@@ -136,15 +144,15 @@ impl SettingsDialog {
     }
 }
 
-impl eframe::App for SettingsDialog {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+impl egui_software_backend::App for SettingsDialog {
+    fn ui(&mut self, ui: &mut egui::Ui, _backend: &mut SoftwareBackend) {
         let ctx = ui.ctx().clone();
         let colors = (ERROR_COLORS[usize::from(self.dark)], CAPTION_COLORS[usize::from(self.dark)]);
         let (_, errors) = self.form.edited_settings();
 
-        let content = CentralPanel::default().frame(egui::Frame::central_panel(ui.style()).inner_margin(PADDING)).show(
-            ui,
-            |ui| {
+        let content = CentralPanel::default()
+            .frame(egui::Frame::central_panel(ui.style()).inner_margin(PADDING))
+            .show_inside(ui, |ui| {
                 for (field, text) in &mut self.form.numbers {
                     Self::number_row(ui, field, text, errors.contains_key(field.name), colors);
                 }
@@ -185,8 +193,7 @@ impl eframe::App for SettingsDialog {
                         }
                     });
                 });
-            },
-        );
+            });
 
         if ctx.input(|input| input.key_pressed(Key::Enter)) {
             self.save_settings(&ctx);
@@ -210,48 +217,51 @@ impl eframe::App for SettingsDialog {
 
 /// Show the dialog until closed, return true if the settings were saved.
 /// With `close_with_tray`, also close without saving once stdin closes, i.e. when the tray app quits.
+///
+/// Drawn on the CPU: with a GPU swapchain, G-Sync drove the display from the dialog's frames,
+/// and the whole screen flickered at each mouse move while the dialog was in front.
 pub fn run(platform: Arc<dyn Platform>, settings: Settings, close_with_tray: bool) -> bool {
     let mut viewport = ViewportBuilder::default()
         .with_title(TITLE)
-        .with_inner_size([WIDTH, 400.0])
+        .with_inner_size([WIDTH, HEIGHT])
         .with_resizable(false)
         .with_maximize_button(false);
-    match eframe::icon_data::from_png_bytes(APP_ICON_PNG) {
-        Ok(icon) => viewport = viewport.with_icon(icon),
-        Err(e) => tracing::warn!("Invalid app icon: {e}"),
+    if let Some([left, top, width, height]) = platform.work_area() {
+        viewport = viewport.with_position([left + (width - WIDTH) / 2.0, top + (height - HEIGHT) / 2.0]);
     }
-    let options = eframe::NativeOptions { viewport, centered: true, ..Default::default() };
+    if let Some(icon) = app_icon() {
+        viewport = viewport.with_icon(icon);
+    } else {
+        tracing::warn!("Invalid app icon");
+    }
+    let options = SoftwareBackendAppConfiguration::new().viewport_builder(viewport);
     let saved = Arc::new(AtomicBool::new(false));
     let dialog_saved = saved.clone();
     let device_names = known_device_names(&settings, &seen_devices_file(), &extra_devices_file());
-    let form = Form::new(settings, device_names);
-    let result = eframe::run_native(
-        TITLE,
-        options,
-        Box::new(move |creation| {
-            // Follow the Windows app theme, elsewhere egui follows the system theme
-            let dark = if cfg!(windows) {
-                let dark = platform.apps_use_dark_theme();
-                creation.egui_ctx.set_theme(if dark { Theme::Dark } else { Theme::Light });
-                dark
-            } else {
-                creation.egui_ctx.system_theme() == Some(Theme::Dark)
-            };
-            if close_with_tray {
-                close_when_tray_quits(creation.egui_ctx.clone());
-            }
-            let autostart = platform.is_autostart_enabled();
-            Ok(Box::new(SettingsDialog {
-                platform,
-                form,
-                autostart,
-                saved: dialog_saved,
-                dark,
-                ready: false,
-                height: 0.0,
-            }))
-        }),
-    );
+    let mut form = Some(Form::new(settings, device_names));
+    // Called once, when the window opens
+    let result = run_app_with_software_backend(options, move |egui_ctx| {
+        // Follow the Windows app theme, elsewhere egui follows the system theme
+        let dark = if cfg!(windows) {
+            let dark = platform.apps_use_dark_theme();
+            egui_ctx.set_theme(if dark { Theme::Dark } else { Theme::Light });
+            dark
+        } else {
+            egui_ctx.system_theme() == Some(Theme::Dark)
+        };
+        if close_with_tray {
+            close_when_tray_quits(egui_ctx);
+        }
+        SettingsDialog {
+            platform: platform.clone(),
+            form: form.take().unwrap_or_else(|| unreachable!("the dialog window opens once")),
+            autostart: platform.is_autostart_enabled(),
+            saved: dialog_saved.clone(),
+            dark,
+            ready: false,
+            height: 0.0,
+        }
+    });
     if let Err(e) = result {
         tracing::error!("Could not open the settings dialog: {e}");
     }
