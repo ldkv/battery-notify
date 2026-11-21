@@ -80,6 +80,7 @@ The dialog can also be opened from a terminal with `battery-notifier settings`.
 - DualSense controller
 - Keychron K2 HE via the 2.4 GHz receiver, with custom firmware: see [docs/keychron-k2-he.md](docs/keychron-k2-he.md)
 - Keychron M6 8K via the 2.4 GHz receiver Keychron Ultra-Link 8K, tested on Windows: see [docs/keychron-m6.md](docs/keychron-m6.md)
+- Logitech Pro X3 Superstrike via its Lightspeed receiver, tested on Windows
 - Bluetooth devices with battery level on Windows
 
 ### Trying another model

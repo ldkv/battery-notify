@@ -98,6 +98,64 @@ impl Driver for KeychronM6 {
     }
 }
 
+// Logitech HID++ 2.0, long reports
+const HIDPP_LONG_REPORT_ID: u8 = 0x11;
+const HIDPP_REPORT_SIZE: usize = 20; // report ID + 19 bytes
+const HIDPP_READ_TIMEOUT: Duration = Duration::from_secs(1);
+const HIDPP_RECEIVER_SLOT: u8 = 1; // first device paired to the receiver
+const HIDPP_ERROR: u8 = 0xFF;
+const HIDPP_SOFTWARE_ID: u8 = 0x0A; // tells our replies apart from notifications and other apps'
+const HIDPP_ROOT: u8 = 0x00; // IRoot is always at feature index 0
+const HIDPP_GET_FEATURE: u8 = 0x00;
+const HIDPP_UNIFIED_BATTERY: u16 = 0x1004;
+const HIDPP_GET_STATUS: u8 = 0x01;
+
+/// Logitech PRO X3 SUPERSTRIKE connected via its Lightspeed receiver.
+pub const LOGITECH_PRO_X3_SUPERSTRIKE: DeviceType = DeviceType {
+    name: Cow::Borrowed("Logitech Pro X3 Superstrike"),
+    vid: 0x046D, // Logitech
+    pid: 0xC54F, // Lightspeed receiver
+    filter: Filter { usage_page: Some(0xFF43), usage: Some(0x0302), interface_number: None },
+    driver: |_| Box::new(LogitechHidpp),
+};
+
+/// Battery of a HID++ 2.0 device with the Unified Battery feature, behind a receiver.
+struct LogitechHidpp;
+
+impl LogitechHidpp {
+    /// Send a request and return the parameters of its reply, None on error or timeout.
+    fn request(device: &dyn HidIo, feature_index: u8, function: u8, params: &[u8]) -> Option<Vec<u8>> {
+        let function = (function << 4) | HIDPP_SOFTWARE_ID;
+        let mut message = vec![0; HIDPP_REPORT_SIZE];
+        message[..4].copy_from_slice(&[HIDPP_LONG_REPORT_ID, HIDPP_RECEIVER_SLOT, feature_index, function]);
+        message[4..4 + params.len()].copy_from_slice(params);
+        if !device.write(&message) {
+            return None;
+        }
+        let header = [HIDPP_LONG_REPORT_ID, HIDPP_RECEIVER_SLOT, feature_index, function];
+        let error = [HIDPP_LONG_REPORT_ID, HIDPP_RECEIVER_SLOT, HIDPP_ERROR, feature_index, function];
+        let reply = read_reply(device, HIDPP_REPORT_SIZE, HIDPP_READ_TIMEOUT, |report| {
+            report.starts_with(&header) || report.starts_with(&error)
+        });
+        reply.starts_with(&header).then(|| reply[header.len()..].to_vec())
+    }
+}
+
+impl Driver for LogitechHidpp {
+    fn battery_level(&self, device: &dyn HidIo) -> Option<u8> {
+        // The feature index can change with the firmware: ask the device for it
+        let feature = Self::request(device, HIDPP_ROOT, HIDPP_GET_FEATURE, &HIDPP_UNIFIED_BATTERY.to_be_bytes());
+        let Some(&feature_index) = feature.as_ref().and_then(|params| params.first()).filter(|index| **index != 0)
+        else {
+            tracing::info!("Logitech HID++ - No battery feature (asleep, off or not paired?)");
+            return None;
+        };
+        // getStatus: state of charge in %, level, charging status, external power
+        let status = Self::request(device, feature_index, HIDPP_GET_STATUS, &[])?;
+        status.first().copied().filter(|level| *level <= MAX_BATTERY_LEVEL)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,6 +222,52 @@ mod tests {
     fn mouse_asleep() {
         let (level, _) = battery_level(vec![]);
         assert_eq!(level, None);
+    }
+
+    // Replies captured from a PRO X3 SUPERSTRIKE on receiver C54F: Unified Battery at index 7, 84%
+    const HIDPP_FEATURE_REPLY: [u8; 20] =
+        [0x11, 0x01, 0x00, 0x0A, 0x07, 0x00, 0x05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const HIDPP_STATUS_REPLY: [u8; 20] = [0x11, 0x01, 0x07, 0x1A, 0x54, 0x08, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+    fn hidpp_battery_level(replies: impl IntoIterator<Item = (u8, Vec<Vec<u8>>)>) -> (Option<u8>, FakeDevice) {
+        // Keyed by the feature index: 0 for IRoot, 7 for Unified Battery
+        let receiver = FakeDevice::new(2, replies);
+        (LogitechHidpp.battery_level(&receiver), receiver)
+    }
+
+    #[test]
+    fn hidpp_reads_battery() {
+        let (level, receiver) = hidpp_battery_level([
+            (0x00, vec![HIDPP_FEATURE_REPLY.to_vec()]),
+            (0x07, vec![HIDPP_STATUS_REPLY.to_vec()]),
+        ]);
+        assert_eq!(level, Some(84));
+        let written = receiver.written.borrow();
+        assert_eq!(written[0][..6], [0x11, 0x01, 0x00, 0x0A, 0x10, 0x04]);
+        assert_eq!(written[1][..4], [0x11, 0x01, 0x07, 0x1A]);
+        assert!(written.iter().all(|message| message.len() == 20));
+    }
+
+    #[test]
+    fn hidpp_skips_unrelated_reports() {
+        let notification = vec![0x11, 0x01, 0x07, 0x00, 0x50, 0x04];
+        let (level, _) = hidpp_battery_level([
+            (0x00, vec![HIDPP_FEATURE_REPLY.to_vec()]),
+            (0x07, vec![notification, HIDPP_STATUS_REPLY.to_vec()]),
+        ]);
+        assert_eq!(level, Some(84));
+    }
+
+    #[test]
+    fn hidpp_no_battery() {
+        let error = vec![0x11, 0x01, 0xFF, 0x00, 0x0A, 0x05];
+        let mut no_feature = HIDPP_FEATURE_REPLY.to_vec();
+        no_feature[4] = 0;
+        for replies in [vec![], vec![error], vec![no_feature]] {
+            let (level, receiver) = hidpp_battery_level([(0x00, replies)]);
+            assert_eq!(level, None);
+            assert_eq!(receiver.written.borrow().len(), 1);
+        }
     }
 
     #[test]

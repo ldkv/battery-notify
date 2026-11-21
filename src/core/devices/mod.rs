@@ -90,12 +90,13 @@ pub struct DeviceType {
     pub driver: fn(bool) -> Box<dyn Driver>,
 }
 
-pub const HID_DEVICES: [DeviceType; 5] = [
+pub const HID_DEVICES: [DeviceType; 6] = [
     mouse::RAZER_PRO_CLICK_MINI,
     headset::HYPERX_CLOUD_ALPHA_WIRELESS,
     dualsense::DUALSENSE,
     keyboard::KEYCHRON_K2_HE,
     mouse::KEYCHRON_M6,
+    mouse::LOGITECH_PRO_X3_SUPERSTRIKE,
 ];
 
 /// Read reports until one is accepted by `is_reply`, skipping unrelated ones. Empty on timeout.
